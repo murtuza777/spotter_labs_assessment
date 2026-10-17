@@ -2,6 +2,7 @@
 
 import logging
 import math
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -74,6 +75,8 @@ class TripPlan:
     reason: str
     warnings: list[str]
     notices: list[str]
+    # Request accounting: provider calls, weather cache use and timings (also logged).
+    meta: dict = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -93,11 +96,13 @@ class TripPlanner:
         self._tare_lb = tare_lb
 
     def plan(self, req: TripRequest) -> TripPlan:
-        options, notices = self._candidate_routes(req)
+        t0 = time.perf_counter()
+        options, notices, routing_lookups = self._candidate_routes(req)
+        routing_ms = round((time.perf_counter() - t0) * 1000)
         prepared = [self._prepare(opt, src, req) for opt, src in options]
 
         all_cps = [cp for p in prepared for cp in p.checkpoints]
-        series = self._weather.series_for(
+        series, weather_stats = self._weather.series_with_stats(
             (cp.weather_cell for cp in all_cps if cp.weather_cell),
             min(cp.forecast_hour for cp in all_cps),
             max(cp.forecast_hour for cp in all_cps),
@@ -132,23 +137,53 @@ class TripPlanner:
         order = {s.id: i + 1 for i, s in enumerate(ranked)}
         for r in routes:
             r.rank = order[r.id]
+        meta = {
+            "routing_lookups": routing_lookups,
+            "routing_ms": routing_ms,
+            "checkpoints": len(all_cps),
+            "weather": weather_stats.as_dict(),
+            "total_ms": round((time.perf_counter() - t0) * 1000),
+        }
+        log.info(
+            "plan routes=%d sources=%s routing_lookups=%d checkpoints=%d weather=%s "
+            "routing_ms=%d total_ms=%d",
+            len(routes),
+            ",".join(r.source for r in routes),
+            routing_lookups,
+            len(all_cps),
+            weather_stats.as_dict(),
+            routing_ms,
+            meta["total_ms"],
+        )
         return TripPlan(
             request=req,
             routes=routes,
             recommended_id=ranked[0].id,
             reason=explain(ranked),
-            warnings=warnings([r.scored for r in routes]),
+            warnings=warnings(ranked),
             notices=notices,
+            meta=meta,
         )
 
     # -- routes ---------------------------------------------------------------------------
 
     def _candidate_routes(
         self, req: TripRequest
-    ) -> tuple[list[tuple[RouteOption, str]], list[str]]:
+    ) -> tuple[list[tuple[RouteOption, str]], list[str], int]:
+        """Up to 3 distinct routes, the notices to show about them, and the routing lookups made
+        (calls into the routing layer; repeats within the route-cache TTL never reach TomTom).
+
+        TomTom alternatives come first. Only if it returns fewer than 3 distinct routes do we
+        ask TomTom for routes through a waypoint either side of the main route's midpoint.
+        Those are real, drivable TomTom truck routes, labelled "detour" everywhere they
+        appear; nothing is synthesized, and if they fail fewer routes are shown.
+        """
         weight_kg = round((req.load_lb + self._tare_lb) * LB_TO_KG)
+        calls = 0
 
         def call(via: LatLon | None = None, alternatives: int = 0) -> list[RouteOption]:
+            nonlocal calls
+            calls += 1
             return self._routing.routes(
                 req.origin.point,
                 req.destination.point,
@@ -178,6 +213,7 @@ class TripPlanner:
             )
 
         notices: list[str] = []
+        api_count = len(found)
         if len(found) < TARGET_ROUTES:
             detours = _detour_points(found[0][0].points)
             with ThreadPoolExecutor(max_workers=len(detours)) as pool:
@@ -185,14 +221,19 @@ class TripPlanner:
             for options in results:
                 for option in options[:1]:
                     add(option, "detour")
-            if any(src == "detour" for _, src in found):
+            detour_ids = [ROUTE_IDS[i] for i, (_, src) in enumerate(found) if src == "detour"]
+            if detour_ids:
                 notices.append(
-                    "The routing API returned fewer than 3 distinct truck routes, so the extra "
-                    "option(s) were generated through a detour waypoint."
+                    f"TomTom returned {api_count} distinct truck route(s). "
+                    f"Route {' and '.join(detour_ids)} {'is' if len(detour_ids) == 1 else 'are'} "
+                    "TomTom truck routing through a waypoint beside the main route, offered as a "
+                    "detour option rather than a TomTom alternative."
                 )
             if len(found) < TARGET_ROUTES:
-                notices.append(f"Only {len(found)} distinct truck route(s) exist for this trip.")
-        return found, notices
+                notices.append(
+                    f"Only {len(found)} distinct truck route(s) could be found for this trip."
+                )
+        return found, notices, calls
 
     # -- checkpoints ----------------------------------------------------------------------
 

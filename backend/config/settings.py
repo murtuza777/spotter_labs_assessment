@@ -96,6 +96,8 @@ WEATHER_CACHE_TTL_S = env.int("WEATHER_CACHE_TTL_S", default=3600)
 WEATHER_BATCH_SIZE = env.int("WEATHER_BATCH_SIZE", default=25)
 WEATHER_MAX_WORKERS = env.int("WEATHER_MAX_WORKERS", default=3)
 HEATMAP_MAX_POINTS = env.int("HEATMAP_MAX_POINTS", default=220)
+# Identical routing requests within this window reuse TomTom's answer (services/routing.py).
+ROUTE_CACHE_TTL_S = env.int("ROUTE_CACHE_TTL_S", default=600)
 
 # Routing weight = load + an empty tractor-trailer (~35,000 lb is typical for a 5-axle rig).
 TRUCK_TARE_LB = env.float("TRUCK_TARE_LB", default=35_000)

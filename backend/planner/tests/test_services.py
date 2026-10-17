@@ -96,7 +96,7 @@ def test_unknown_weather_is_reported_not_scored(tomtom_routes, departure) -> Non
     weather.fail_cells = {service.cell_for(LatLon(39.75, -105.0))}
     plan = TripPlanner(FakeRouting(tomtom_routes), service, tare_lb=0).plan(_request(departure))
     assert plan.routes[0].scored.summary.unknown_miles > 0
-    assert any("unavailable" in w for w in plan.warnings)
+    assert any("No forecast was available" in w for w in plan.warnings)
 
 
 def test_weather_cells_are_snapped_deduped_and_cached(tomtom_routes, departure) -> None:
@@ -132,7 +132,10 @@ def test_detour_fallback_fills_to_three_routes(tomtom_routes, departure) -> None
     routing = FakeRouting(main, detours=[_shifted(main[0], 1.5), _shifted(main[0], -1.5)])
     plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
     assert [r.source for r in plan.routes] == ["routing_api", "detour", "detour"]
-    assert any("detour" in n for n in plan.notices)
+    assert any(
+        "Route B and C are TomTom truck routing through a waypoint" in n for n in plan.notices
+    )
+    assert plan.meta["routing_lookups"] == 3  # 1 alternatives request + 2 detours, no more
     assert sum(1 for c in routing.calls if c["via"] is not None) == 2
 
 
@@ -174,3 +177,47 @@ def test_heatmap_frames_shape_and_values(tomtom_routes, departure) -> None:
     # 40 mph gust (High) with a 45,000 lb load is Severe.
     assert heat.frames["risk"][0][0] == int(RiskLevel.SEVERE)
     assert heat.frames["gust"][0][0] == 40
+
+
+def test_two_api_alternatives_need_one_detour(tomtom_routes, departure) -> None:
+    routing = FakeRouting(tomtom_routes[:2], detours=[_shifted(tomtom_routes[0], 1.5)] * 2)
+    plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
+    assert [r.source for r in plan.routes] == ["routing_api", "routing_api", "detour"]
+    assert any("TomTom returned 2 distinct truck route(s). Route C is" in n for n in plan.notices)
+
+
+def test_three_api_alternatives_make_no_extra_calls(tomtom_routes, departure) -> None:
+    routing = FakeRouting(tomtom_routes)
+    plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
+    assert plan.meta["routing_lookups"] == 1 and plan.notices == []
+
+
+def test_failed_detours_show_fewer_routes_honestly(tomtom_routes, departure) -> None:
+    routing = FakeRouting(tomtom_routes[:1], detours=[])  # detour calls return nothing
+    plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
+    assert len(plan.routes) == 1
+    assert plan.notices == ["Only 1 distinct truck route(s) could be found for this trip."]
+
+
+def test_checkpoints_outside_forecast_coverage_are_unknown(tomtom_routes, departure) -> None:
+    class ShortForecast(FakeWeather):
+        def hourly(self, cells, start, end):
+            return super().hourly(cells, start, start + timedelta(hours=3))  # only 4 hours
+
+    service = _service(ShortForecast(calm))
+    plan = TripPlanner(FakeRouting(tomtom_routes), service, tare_lb=0).plan(_request(departure))
+    cps = plan.routes[0].scored.checkpoints
+    late = [cp for cp in cps if cp.forecast_hour > departure + timedelta(hours=3)]
+    assert late and all(cp.weather is None and cp.risk is None for cp in late)
+    assert plan.routes[0].scored.summary.unknown_miles > 0
+
+
+def test_heatmap_reports_unknown_cells_and_stats(tomtom_routes, departure) -> None:
+    weather = FakeWeather(calm)
+    service = _service(weather)
+    routes = [resample(r.points, 20) for r in tomtom_routes]
+    first = HeatmapBuilder(service, max_points=60).build(routes, departure, load_lb=0)
+    assert first.meta["weather"]["fetched"] > 0 and first.meta["unknown_cells"] == 0
+    weather.fail_cells = set()
+    again = HeatmapBuilder(service, max_points=60).build(routes, departure, load_lb=0)
+    assert again.meta["weather"]["fetched"] == 0  # all from cache

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from django.core.cache import cache
@@ -64,6 +64,10 @@ def test_plan_success_shape(api) -> None:
     assert cp["eta"].endswith("Z")
     assert cp["risk"]["level"] == "low"
     assert cp["weather"]["gust_mph"] == 12.0
+    meta = data["meta"]
+    assert meta["routing_lookups"] == 1
+    assert meta["weather"]["failed"] == 0
+    assert meta["weather"]["cells"] == meta["weather"]["cached"] + meta["weather"]["fetched"]
 
 
 @pytest.mark.parametrize(
@@ -135,3 +139,68 @@ def test_geocode_caches_results(monkeypatch) -> None:
         assert res.json()["results"][0]["label"] == "Denver, Colorado, US"
     assert calls == ["Denver"]
     assert client.get("/api/geocode/", {"q": "D"}).status_code == 400
+
+
+def test_naive_departure_time_is_rejected(api) -> None:
+    # Regression (audit D3): naive timestamps were silently read as UTC.
+    naive = (datetime.now(UTC) + timedelta(hours=3)).replace(tzinfo=None).isoformat()
+    res = api.post("/api/plan/", _body(departure_time=naive), content_type="application/json")
+    assert res.status_code == 400
+    assert "timezone" in res.json()["error"]["details"]["departure_time"][0]
+
+
+def test_offset_departure_time_is_converted_to_utc(api) -> None:
+    local = (datetime.now(UTC) + timedelta(hours=3)).astimezone(timezone(timedelta(hours=-6)))
+    res = api.post(
+        "/api/plan/", _body(departure_time=local.isoformat()), content_type="application/json"
+    )
+    assert res.status_code == 200
+    assert res.json()["request"]["departure_time"].endswith("Z")
+
+
+@pytest.mark.parametrize("load", [0, 80_000])
+def test_load_bounds_inclusive(api, load) -> None:
+    # 0 lb is a valid empty-trailer (deadhead) trip; 80,000 lb is the US gross limit we cap at.
+    res = api.post("/api/plan/", _body(load_weight_lb=load), content_type="application/json")
+    assert res.status_code == 200
+
+
+@pytest.mark.parametrize("load", ["NaN", "heavy", None, 80_001])
+def test_bad_load_values(api, load) -> None:
+    res = api.post("/api/plan/", _body(load_weight_lb=load), content_type="application/json")
+    assert res.status_code == 400
+    assert "load_weight_lb" in res.json()["error"]["details"]
+
+
+@pytest.mark.parametrize("interval", [10, 25, 50])
+def test_each_supported_interval(api, interval) -> None:
+    res = api.post(
+        "/api/plan/", _body(sample_interval_mi=interval), content_type="application/json"
+    )
+    cps = res.json()["routes"][0]["checkpoints"]
+    assert cps[1]["mile"] == interval
+
+
+def test_malformed_json_body() -> None:
+    res = Client().post("/api/plan/", "{not json", content_type="application/json")
+    assert res.status_code == 400
+    assert res.json()["error"]["code"] == "parse_error"
+
+
+def test_wrong_method_and_unknown_path_return_json() -> None:
+    assert Client().get("/api/plan/").json()["error"]["code"] == "method_not_allowed"
+    res = Client().get("/api/does-not-exist/")
+    assert res.status_code == 404
+    assert res.json() == {"error": {"code": "not_found", "message": "Not found."}}
+
+
+def test_unexpected_exception_is_a_generic_500(monkeypatch) -> None:
+    class Boom:
+        def plan(self, req):
+            raise RuntimeError("internal detail that must not leak")
+
+    monkeypatch.setattr(deps, "trip_planner", lambda: Boom())
+    res = Client().post("/api/plan/", _body(), content_type="application/json")
+    assert res.status_code == 500
+    assert "internal detail" not in res.content.decode()
+    assert res.json()["error"]["code"] == "server_error"

@@ -27,6 +27,7 @@ def plan_json(plan: TripPlan) -> dict:
         "recommendation": {"reason": plan.reason, "warnings": plan.warnings},
         "routes": [_route(r) for r in plan.routes],
         "notices": plan.notices,
+        "meta": plan.meta,
     }
 
 
@@ -97,4 +98,5 @@ def heatmap_json(heatmap: Heatmap) -> dict:
         "grid_step_deg": heatmap.grid_step_deg,
         "levels": [lvl.slug for lvl in RiskLevel],
         "frames": heatmap.frames,
+        "meta": heatmap.meta,
     }

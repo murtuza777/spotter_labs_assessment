@@ -14,6 +14,7 @@ from planner.providers.tomtom import TomTomRouting
 from planner.providers.tomtom_search import TomTomGeocoder
 from planner.services.heatmap import HeatmapBuilder
 from planner.services.plan_trip import TripPlanner
+from planner.services.routing import CachedRouting
 from planner.services.weather import WeatherService
 
 USER_AGENT = "truck-weather-routing/1.0 (+https://github.com/murtuza777/spotter_labs_assessment)"
@@ -48,7 +49,11 @@ def weather_service() -> WeatherService:
 
 @cache
 def trip_planner() -> TripPlanner:
-    routing = TomTomRouting(settings.TOMTOM_API_KEY, http_client())
+    routing = CachedRouting(
+        TomTomRouting(settings.TOMTOM_API_KEY, http_client()),
+        django_cache,
+        ttl_s=settings.ROUTE_CACHE_TTL_S,
+    )
     return TripPlanner(routing, weather_service(), tare_lb=settings.TRUCK_TARE_LB)
 
 

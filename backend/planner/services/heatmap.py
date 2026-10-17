@@ -1,6 +1,6 @@
 """Hourly weather frames over the trip corridor for the 0-48 h heatmap slider."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from planner.domain.corridor import corridor_grid
@@ -19,6 +19,7 @@ class Heatmap:
     grid_step_deg: float
     # frames[metric][hour_index][point_index]; None where weather is unavailable
     frames: dict[str, list[list[float | None]]]
+    meta: dict = field(default_factory=dict)
 
 
 class HeatmapBuilder:
@@ -43,7 +44,7 @@ class HeatmapBuilder:
         first = forecast_hour_for(departure)
         hours = [first + timedelta(hours=h) for h in range(HEATMAP_HOURS + 1)]
         cells = [self._weather.cell_for(p) for p in points]
-        series = self._weather.series_for(cells, hours[0], hours[-1])
+        series, stats = self._weather.series_with_stats(cells, hours[0], hours[-1])
 
         frames: dict[str, list[list[float | None]]] = {
             "risk": [],
@@ -70,4 +71,11 @@ class HeatmapBuilder:
             frames["gust"].append(gust_row)
             frames["rain"].append(rain_row)
             frames["snow"].append(snow_row)
-        return Heatmap(hours=hours, points=points, grid_step_deg=step, frames=frames)
+        unknown = sum(v is None for row in frames["risk"] for v in row)
+        return Heatmap(
+            hours=hours,
+            points=points,
+            grid_step_deg=step,
+            frames=frames,
+            meta={"weather": stats.as_dict(), "unknown_cells": unknown},
+        )

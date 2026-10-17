@@ -1,7 +1,9 @@
 """Weather lookups on the model grid, cached per cell."""
 
 import logging
+import time
 from collections.abc import Callable, Iterable
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 
 from django.core.cache import BaseCache
@@ -15,6 +17,18 @@ log = logging.getLogger(__name__)
 # Fetch at least this far ahead so one cached series serves the plan and the 48 h heatmap.
 MIN_FETCH_HOURS = 72
 MAX_FORECAST_HOURS = 16 * 24
+
+
+@dataclass(frozen=True, slots=True)
+class WeatherStats:
+    cells: int
+    cached: int
+    fetched: int
+    failed: int
+    ms: int
+
+    def as_dict(self) -> dict[str, int]:
+        return asdict(self)
 
 
 class WeatherService:
@@ -46,6 +60,16 @@ class WeatherService:
         self, cells: Iterable[LatLon], start: datetime, end: datetime
     ) -> dict[LatLon, HourlySeries]:
         """Hourly series covering [start, end] for each cell that could be fetched."""
+        return self.series_with_stats(cells, start, end)[0]
+
+    def series_with_stats(
+        self, cells: Iterable[LatLon], start: datetime, end: datetime
+    ) -> tuple[dict[LatLon, HourlySeries], "WeatherStats"]:
+        """Like `series_for`, plus how many cells were cached, fetched or failed.
+
+        Cells that fail are not cached, so the next request retries them.
+        """
+        t0 = time.perf_counter()
         wanted = list(dict.fromkeys(cells))
         found: dict[LatLon, HourlySeries] = {}
         keys = {cell: self._key(cell) for cell in wanted}
@@ -58,18 +82,28 @@ class WeatherService:
             else:
                 missing.append(cell)
 
+        fetched: dict[LatLon, HourlySeries] = {}
         if missing:
             fetch_start, fetch_end = self._fetch_window(start, end)
             fetched = self._provider.hourly(missing, fetch_start, fetch_end)
             self._cache.set_many({keys[c]: s for c, s in fetched.items()}, timeout=self._ttl)
             found.update(fetched)
-            log.info(
-                "weather cells: %d cached, %d fetched, %d failed",
-                len(wanted) - len(missing),
-                len(fetched),
-                len(missing) - len(fetched),
-            )
-        return found
+        stats = WeatherStats(
+            cells=len(wanted),
+            cached=len(wanted) - len(missing),
+            fetched=len(fetched),
+            failed=len(missing) - len(fetched),
+            ms=round((time.perf_counter() - t0) * 1000),
+        )
+        log.info(
+            "weather cells=%d cached=%d fetched=%d failed=%d ms=%d",
+            stats.cells,
+            stats.cached,
+            stats.fetched,
+            stats.failed,
+            stats.ms,
+        )
+        return found, stats
 
     def _fetch_window(self, start: datetime, end: datetime) -> tuple[datetime, datetime]:
         now_hour = self._now().astimezone(UTC).replace(minute=0, second=0, microsecond=0)
