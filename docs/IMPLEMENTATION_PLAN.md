@@ -130,8 +130,10 @@ The brief leaves some cases open. These are the interpretations we will implemen
 ### API budget per plan request
 
 - **Routing:** 1 TomTom call, or up to 3 if we need the fallback alternatives (§4.2).
-- **Weather:** checkpoint coordinates snapped to 0.1° and deduplicated, plus about 250–400 heatmap grid points. That's batched at about 100 locations per request, with only the hours we need (`start_hour`/`end_hour`) and 5 variables.
-- **Caching:** results are cached by (cell, model hour) for 30 min. The rate counting for many locations isn't documented, so we budget as if each location counts as one call, and cap the total at 600 locations per plan.
+- **Weather:** checkpoint coordinates snapped to the **0.25° GFS grid** (`models=gfs_seamless`) and deduplicated. Heatmap grid points sit on the same grid, so they share the cache. Batches of about 25 locations, at most 3 requests in parallel, retrying on 429/503 with backoff.
+- **Caching:** each cell's hourly series is cached for 60 min. Cells that still fail are marked *unknown*; their miles aren't scored, and the UI shows a notice.
+
+> **Phase 1 finding (2026-10-17):** Open-Meteo's free tier answered with "The service is overloaded" (503). With the default model, latency was about 0.5 s **per location**; parallel requests got 429. Choosing `gfs_seamless` and snapping to its native 0.25° grid cut the location count and latency several times over without losing resolution. MET Norway was fast but has no gusts or rain/snow split outside the Nordics, so it was rejected. TomTom truck routing returned 3 routes, with about 100–200 `progress` entries each (`pointIndex`, `distanceInMeters`, `travelTimeInSeconds`). Open-Meteo returns snowfall in inches when `precipitation_unit=inch`.
 
 ---
 
