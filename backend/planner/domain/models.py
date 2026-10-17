@@ -40,9 +40,23 @@ class WeatherSample:
 
 
 @dataclass(frozen=True, slots=True)
+class RiskFactor:
+    """One input to a checkpoint's risk: its reading and the level the rule table gives it."""
+
+    name: str  # "wind", "rain" or "snow"
+    label: str  # "gusts" or "wind" for wind, else same as name
+    value: float
+    unit: str
+    base_level: RiskLevel  # from the threshold table alone
+    level: RiskLevel  # after the load rules (only wind can differ)
+    load_rule: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class RiskAssessment:
     level: RiskLevel
     reasons: tuple[str, ...] = ()
+    factors: tuple[RiskFactor, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,7 +7,7 @@ higher level (rain 0.25 in/hr is High). The brief writes the No Travel bands as 
 
 import math
 
-from planner.domain.models import RiskAssessment, RiskLevel, WeatherSample
+from planner.domain.models import RiskAssessment, RiskFactor, RiskLevel, WeatherSample
 
 L = RiskLevel
 
@@ -94,4 +94,17 @@ def assess(weather: WeatherSample, load_lb: float, wind_metric: str = "gust") ->
     if snow_level > L.LOW:
         reasons.append(f"Snow {weather.snow_in_hr:.2f} in/hr: {snow_level.label}")
 
-    return RiskAssessment(level=max(wind_level, rain_level, snow_level), reasons=tuple(reasons))
+    load_note = None
+    if wind_level != base_wind:
+        limit = NO_TRAVEL_LOAD_LB if wind_level == L.NO_TRAVEL else SEVERE_LOAD_LB
+        load_note = (
+            f"load {load_lb:,.0f} lb > {limit:,} lb raises {base_wind.label} to {wind_level.label}"
+        )
+    factors = (
+        RiskFactor("wind", wind_name.lower(), wind, "mph", base_wind, wind_level, load_note),
+        RiskFactor("rain", "rain", weather.rain_in_hr, "in/hr", rain_level, rain_level, None),
+        RiskFactor("snow", "snow", weather.snow_in_hr, "in/hr", snow_level, snow_level, None),
+    )
+    return RiskAssessment(
+        level=max(wind_level, rain_level, snow_level), reasons=tuple(reasons), factors=factors
+    )

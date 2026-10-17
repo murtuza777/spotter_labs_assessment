@@ -169,3 +169,24 @@ def test_invalid_load_is_rejected(load: float) -> None:
 )
 def test_combinations(gust: float, rain: float, snow: float, load: float, level: L) -> None:
     assert assess(_w(gust=gust, rain=rain, snow=snow), load).level == level
+
+
+def test_factors_explain_each_input_and_the_load_rule() -> None:
+    result = assess(_w(gust=47, rain=0.3, snow=0.0), load_lb=36_000)
+    wind, rain, snow = result.factors
+    assert (wind.name, wind.label, wind.value, wind.base_level, wind.level) == (
+        "wind",
+        "gusts",
+        47,
+        L.SEVERE,
+        L.NO_TRAVEL,
+    )
+    assert wind.load_rule == "load 36,000 lb > 30,000 lb raises Severe to No Travel"
+    assert (rain.level, rain.load_rule) == (L.HIGH, None)
+    assert snow.level == L.LOW
+    assert result.level == L.NO_TRAVEL
+
+
+def test_factors_without_load_rule() -> None:
+    wind = assess(_w(gust=40), load_lb=40_000).factors[0]
+    assert wind.level == wind.base_level == L.HIGH and wind.load_rule is None
