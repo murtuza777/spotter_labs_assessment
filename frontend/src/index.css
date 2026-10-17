@@ -7,6 +7,21 @@ body,
   margin: 0;
 }
 
+@keyframes progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.maplibregl-popup-content {
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.18);
+}
+
 body {
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   background: #f8fafc;
