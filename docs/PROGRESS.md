@@ -13,12 +13,15 @@ Budget: at most 16 h over at most 4 days. Plan: [IMPLEMENTATION_PLAN.md](IMPLEME
 | 2026-10-17 | 9–11: deploy config, CI, docs | 0.25 | Dockerfile, render.yaml, CI, keep-warm, README, Loom script |
 | 2026-10-17 | 9: Render-only hosting | 0.25 | Moved the frontend from Vercel to a Render static site in the same Blueprint. `truck-weather-api`, `spotter-truck-routing` and `spotter-truck-routing-api` were already taken on onrender.com, so the services are named `murtuza-truck-routing(-api)` |
 
-**Total so far: about 2.5 h of 16 h**
+| 2026-10-17 | 9: deploy and live smoke test | 0.25 | Blueprint deployed (the Docker image built on Render in 53 s). Live tests: health, CORS (frontend origin only), HSTS/X-Frame headers, geocode, plan (5–7 s with real weather), heatmap (1.8 s), validation errors. Photon refused connections from Render once, so a TomTom Search fallback was added |
+
+**Total so far: about 2.75 h of 16 h**
 
 ## Remaining
 
-- [ ] Deploy the Render Blueprint (API + static site); optionally set the `API_HEALTH_URL` repo variable during review
-- [ ] Smoke-test the 3 demo trips on the live URL
+- [x] Deploy the Render Blueprint (API + static site): https://murtuza-truck-routing.onrender.com
+- [x] Smoke-test on the live URL: Seattle → Spokane in the browser, with autocomplete, plan, heatmap, slider, metrics and no console errors
+- [ ] Optional: connect Render's GitHub app so pushes auto-deploy, run a Blueprint "Manual sync" to apply `GEOCODER_ORDER`, and set the `API_HEALTH_URL` repo variable during review
 - [ ] Record the Loom ([LOOM_SCRIPT.md](LOOM_SCRIPT.md)) and add the links to the README
 - [ ] Submit the GitHub, hosted and Loom links to Spotter
 

@@ -126,7 +126,7 @@ Everything runs on Render from one [Blueprint](render.yaml):
 
 1. Open https://render.com/deploy?repo=https://github.com/murtuza777/spotter_labs_assessment and approve the Blueprint.
 2. Paste your `TOMTOM_API_KEY` when prompted. Everything else is preset: CORS, the API URL in the frontend build, and a generated secret key.
-3. Pushes to `main` redeploy both services.
+3. Pushes to `main` redeploy both services, once Render's GitHub app has access to the repo (Render → Account settings → GitHub). Without it, Render gets no push webhooks, so deploy with the CLI: `render deploys create <service-id> --wait`.
 
 **Keep warm (optional):** set the repository variable `API_HEALTH_URL`, and [keep-warm.yml](.github/workflows/keep-warm.yml) pings the API every 10 min. Free web services share 750 instance-hours a month per workspace, so turn this off once the review is over.
 
