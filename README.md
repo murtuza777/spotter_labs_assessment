@@ -2,9 +2,9 @@
 
 A React + Django app that helps a truck driver pick the **safest** of three truck routes. For each route it checks the forecast at regular checkpoints, **for the hour the truck will actually reach each one**. It scores that weather with the provided wind, rain, snow and load-weight rules, recommends a route, and shows everything on a map with a 0–48 h weather heatmap.
 
-- **Live app:** _add the Vercel URL here_
+- **Live app:** https://murtuza-truck-routing.onrender.com
+- **API:** https://murtuza-truck-routing-api.onrender.com/api/health/ (free tier, so the first request after idle takes about 30–60 s to wake it)
 - **Walkthrough (Loom):** _add the Loom URL here_
-- **API:** _add the Render URL here_ (`/api/health/`)
 
 ---
 
@@ -42,10 +42,10 @@ The brief leaves a few cases open. These are the choices made, and they're all c
 
 ```mermaid
 flowchart LR
-  UI["React (Vite, TS)<br/>form · route cards · MapLibre map · slider"] -->|POST /api/plan| API
+  UI["React (Vite, TS)<br/>form · route cards · MapLibre map · slider<br/>(Render static site)"] -->|POST /api/plan| API
   UI -->|POST /api/heatmap| API
   UI -->|GET /api/geocode| API
-  subgraph API["Django + DRF"]
+  subgraph API["Django + DRF (Render web service)"]
     V[views + serializers] --> S[services<br/>plan_trip · heatmap · weather cache]
     S --> D[domain — pure Python<br/>geo · sampling · eta · risk · scoring · recommend · corridor]
     S --> P[providers<br/>tomtom · openmeteo · photon]
@@ -115,11 +115,20 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 - **Frontend:** unit tests for polyline decoding, the heatmap weights and cross-fade, and the truck position.
 - **CI:** [GitHub Actions](.github/workflows/ci.yml) runs both suites on every push.
 
-## Deploy
+## Deploy (Render)
 
-- **API (Render):** New → Blueprint → this repo ([`render.yaml`](render.yaml)). Set `TOMTOM_API_KEY`, and set `CORS_ALLOWED_ORIGINS` to the Vercel URL.
-- **Frontend (Vercel):** import the repo with root directory `frontend`, and set `VITE_API_BASE_URL` to the Render URL.
-- **Keep warm (optional):** set the repository variable `API_HEALTH_URL`, and [keep-warm.yml](.github/workflows/keep-warm.yml) pings the API every 10 min so reviewers don't hit a cold start.
+Everything runs on Render from one [Blueprint](render.yaml):
+
+| Service | Type | Notes |
+|---|---|---|
+| `murtuza-truck-routing-api` | Docker web service (free) | Django + gunicorn. It sleeps after 15 idle minutes. The frontend pings `/api/health/` on page load to wake it. |
+| `murtuza-truck-routing` | Static site (free, CDN) | The Vite build. It never sleeps, so the page loads instantly even while the API wakes. |
+
+1. Open https://render.com/deploy?repo=https://github.com/murtuza777/spotter_labs_assessment and approve the Blueprint.
+2. Paste your `TOMTOM_API_KEY` when prompted. Everything else is preset: CORS, the API URL in the frontend build, and a generated secret key.
+3. Pushes to `main` redeploy both services.
+
+**Keep warm (optional):** set the repository variable `API_HEALTH_URL`, and [keep-warm.yml](.github/workflows/keep-warm.yml) pings the API every 10 min. Free web services share 750 instance-hours a month per workspace, so turn this off once the review is over.
 
 ## Limitations and next steps
 

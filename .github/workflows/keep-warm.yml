@@ -1,6 +1,7 @@
 # Render's free tier sleeps after 15 idle minutes; a cold start adds ~30-60 s to the first
 # request. Ping the health endpoint during the review window. Set the repository variable
-# API_HEALTH_URL (e.g. https://truck-weather-api.onrender.com/api/health/) to enable.
+# API_HEALTH_URL (https://murtuza-truck-routing-api.onrender.com/api/health/) to enable, and
+# remove it after the review: free web services share 750 instance-hours/month per workspace.
 name: Keep API warm
 
 on:

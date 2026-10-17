@@ -1,7 +1,7 @@
 # Implementation Plan — Weather-Aware Truck Routing
 
-> **Status, 2026-10-17:** Phases 0–8, 10 and 11 (docs) are built, tested and pushed. Phase 9's deploy configs are ready, and the deploy itself waits on the Render and Vercel accounts. The Loom is still to record. The time log is in [PROGRESS.md](PROGRESS.md).
-> Changes from the original plan: Open-Meteo uses `gfs_seamless` on its 0.25° grid (§3). The heatmap is 49 layers whose opacity cross-fades, rather than one layer whose weight is re-evaluated (§4.5). The frontend calls the API directly with CORS instead of through a Vercel rewrite, which avoids the proxy's timeout on cold plans.
+> **Status, 2026-10-17:** Phases 0–8, 10 and 11 (docs) are built, tested and pushed. Phase 9's Render Blueprint is ready and validated; the services get created from it with one click. The Loom is still to record. The time log is in [PROGRESS.md](PROGRESS.md).
+> Changes from the original plan: Open-Meteo uses `gfs_seamless` on its 0.25° grid (§3). The heatmap is 49 layers whose opacity cross-fades, rather than one layer whose weight is re-evaluated (§4.5). Hosting is all on Render: a static site for the frontend and a Docker web service for the API. The frontend calls the API directly with CORS.
 
 Spotter AI · Full Stack Developer assessment · started 2026-10-17
 **Budget:** at most 16 work hours over at most 4 days.
@@ -121,7 +121,7 @@ The brief leaves some cases open. These are the interpretations we will implemen
 | Backend | Python 3.12, Django 5.2 LTS, DRF 3.18, httpx, django-environ, django-cors-headers, gunicorn | Already scaffolded. Stateless, so no database models. |
 | Tests | pytest, pytest-django, respx (HTTP mocks with recorded fixtures); Vitest | |
 | Lint | ruff (backend), oxlint and `tsc` (frontend) | |
-| Hosting | **Vercel** (frontend) + **Render** (Django in Docker). A Vercel rewrite sends `/api/*` to Render. | The rewrite keeps the API same-origin, so no CORS in production. Render's free tier sleeps when idle, so an UptimeRobot or GitHub Actions cron pings `/api/health/` every 10 min. |
+| Hosting | **Render** for everything, from one Blueprint: a static site (frontend) and a Docker web service (Django). The frontend calls the API directly, with CORS. | One provider and one Blueprint. The static site is served from Render's CDN and never sleeps. The free API sleeps when idle, so the page pings `/api/health/` on load and an optional GitHub Actions cron keeps it warm during review. |
 
 ### Rejected options
 
@@ -143,7 +143,7 @@ The brief leaves some cases open. These are the interpretations we will implemen
 ## 4. Architecture
 
 ```
-frontend (Vercel)                         backend (Render, Django/DRF)
+frontend (Render static site)             backend (Render, Django/DRF)
 ┌─────────────────────────┐   /api/*    ┌──────────────────────────────────────────┐
 │ TripForm + Autocomplete │ ──────────▶ │ api/ views + serializers (validation)    │
 │ RouteList / RouteCard   │             │ services/ plan_trip, heatmap, weather    │
@@ -343,7 +343,7 @@ Each phase ends with something that works and a commit. ✅ marks done.
 
 **Phase 9 — Deploy (1.25 h)**
 - [ ] Backend: `Dockerfile` (uv, gunicorn, 2 workers), Render web service, env vars, `/api/health/` health check.
-- [ ] Frontend: Vercel project, rewrite `/api/(.*)` to the Render URL in `vercel.json`, SPA fallback.
+- [ ] Frontend: Render static site in the same Blueprint, with `VITE_API_BASE_URL` set to the API origin and long cache headers on `/assets/*`.
 - [ ] A keep-warm ping every 10 min; an end-to-end smoke test on the live URL with the 3 demo presets.
 
 **Phase 10 — Hardening (0.5 h)**

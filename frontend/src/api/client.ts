@@ -14,7 +14,7 @@ export class ApiError extends Error {
 }
 
 // Empty in dev (Vite proxies /api). In production, the Render API origin, e.g.
-// VITE_API_BASE_URL=https://truck-weather-api.onrender.com
+// VITE_API_BASE_URL=https://murtuza-truck-routing-api.onrender.com (set in render.yaml)
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {

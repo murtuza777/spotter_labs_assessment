@@ -10,13 +10,14 @@ Budget: at most 16 h over at most 4 days. Plan: [IMPLEMENTATION_PLAN.md](IMPLEME
 | 2026-10-17 | 3: providers, services, API | 0.25 | Endpoints live against real APIs: plan 20 s cold / 3.5 s warm, heatmap 6 KB gzipped |
 | 2026-10-17 | 4–7: frontend | 0.5 | Form, cards, map layers, heatmap, slider, truck marker |
 | 2026-10-17 | 8: performance | 0.25 | Found that data-driven paint re-tiled the source every slider frame; now 49 opacity-faded layers plus feature-state, 0 reloads measured. Phone layout fixes |
-| 2026-10-17 | 9–11: deploy config, CI, docs | 0.25 | Dockerfile, render.yaml, vercel.json, CI, keep-warm, README, Loom script |
+| 2026-10-17 | 9–11: deploy config, CI, docs | 0.25 | Dockerfile, render.yaml, CI, keep-warm, README, Loom script |
+| 2026-10-17 | 9: Render-only hosting | 0.25 | Moved the frontend from Vercel to a Render static site in the same Blueprint. `truck-weather-api`, `spotter-truck-routing` and `spotter-truck-routing-api` were already taken on onrender.com, so the services are named `murtuza-truck-routing(-api)` |
 
-**Total so far: about 2.25 h of 16 h**
+**Total so far: about 2.5 h of 16 h**
 
 ## Remaining
 
-- [ ] Deploy: Render (API) and Vercel (frontend), set `CORS_ALLOWED_ORIGINS` and `VITE_API_BASE_URL`, and the `API_HEALTH_URL` repo variable
+- [ ] Deploy the Render Blueprint (API + static site); optionally set the `API_HEALTH_URL` repo variable during review
 - [ ] Smoke-test the 3 demo trips on the live URL
 - [ ] Record the Loom ([LOOM_SCRIPT.md](LOOM_SCRIPT.md)) and add the links to the README
 - [ ] Submit the GitHub, hosted and Loom links to Spotter
