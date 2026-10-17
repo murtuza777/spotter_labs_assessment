@@ -1,7 +1,10 @@
 from django.urls import path
 
-from planner.views import health
+from planner import views
 
 urlpatterns = [
-    path("health/", health, name="health"),
+    path("health/", views.health, name="health"),
+    path("geocode/", views.geocode, name="geocode"),
+    path("plan/", views.plan, name="plan"),
+    path("heatmap/", views.heatmap, name="heatmap"),
 ]

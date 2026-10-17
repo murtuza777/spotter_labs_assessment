@@ -72,6 +72,7 @@ class Checkpoint:
     point: LatLon
     eta: datetime
     forecast_hour: datetime
+    weather_cell: LatLon | None = None
     weather: WeatherSample | None = None
     risk: RiskAssessment | None = None
     owned_miles: float = 0.0

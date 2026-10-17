@@ -27,6 +27,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
@@ -41,13 +42,10 @@ DATABASES = {
     }
 }
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "planner",
-        "OPTIONS": {"MAX_ENTRIES": 20_000},
-    }
-}
+# Weather cells and geocoder results. In production use a file cache so every gunicorn
+# worker shares it, e.g. CACHE_URL=filecache:///tmp/planner-cache
+CACHES = {"default": env.cache("CACHE_URL", default="locmemcache://planner")}
+CACHES["default"].setdefault("OPTIONS", {})["MAX_ENTRIES"] = 50_000
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [],
@@ -55,7 +53,11 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle"],
-    "DEFAULT_THROTTLE_RATES": {"anon": env("API_THROTTLE_RATE", default="60/min")},
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": env("API_THROTTLE_RATE", default="120/min"),
+        "plan": env("PLAN_THROTTLE_RATE", default="20/min"),
+    },
+    "EXCEPTION_HANDLER": "planner.views.api_exception_handler",
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
@@ -64,7 +66,18 @@ CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 TOMTOM_API_KEY = env("TOMTOM_API_KEY", default="")
 OPEN_METEO_BASE_URL = env("OPEN_METEO_BASE_URL", default="https://api.open-meteo.com/v1/forecast")
 PHOTON_BASE_URL = env("PHOTON_BASE_URL", default="https://photon.komoot.io/api")
-HTTP_TIMEOUT_SECONDS = env.float("HTTP_TIMEOUT_SECONDS", default=15.0)
+HTTP_TIMEOUT_SECONDS = env.float("HTTP_TIMEOUT_SECONDS", default=30.0)
+
+# Weather sampling (see docs/IMPLEMENTATION_PLAN.md section 3)
+WEATHER_MODEL = env("WEATHER_MODEL", default="gfs_seamless")
+WEATHER_GRID_DEG = env.float("WEATHER_GRID_DEG", default=0.25)
+WEATHER_CACHE_TTL_S = env.int("WEATHER_CACHE_TTL_S", default=3600)
+WEATHER_BATCH_SIZE = env.int("WEATHER_BATCH_SIZE", default=25)
+WEATHER_MAX_WORKERS = env.int("WEATHER_MAX_WORKERS", default=3)
+HEATMAP_MAX_POINTS = env.int("HEATMAP_MAX_POINTS", default=220)
+
+# Routing weight = load + an empty tractor-trailer (~35,000 lb is typical for a 5-axle rig).
+TRUCK_TARE_LB = env.float("TRUCK_TARE_LB", default=35_000)
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -79,4 +92,9 @@ LOGGING = {
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
+    # httpx logs full request URLs at INFO, and the TomTom key travels in the query string.
+    "loggers": {
+        "httpx": {"level": "WARNING"},
+        "httpcore": {"level": "WARNING"},
+    },
 }

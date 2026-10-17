@@ -41,6 +41,24 @@ def interpolate_along(points: Sequence[LatLon], cum: Sequence[float], mile: floa
     return LatLon(a.lat + (b.lat - a.lat) * t, a.lon + (b.lon - a.lon) * t)
 
 
+def slice_polyline(
+    points: Sequence[LatLon], cum: Sequence[float], start_mi: float, end_mi: float
+) -> list[LatLon]:
+    """The part of the polyline between two along-route distances."""
+    start_mi, end_mi = max(0.0, start_mi), min(cum[-1], end_mi)
+    if end_mi <= start_mi:
+        p = interpolate_along(points, cum, start_mi)
+        return [p, p]
+    first = bisect_right(cum, start_mi)
+    last = bisect_right(cum, end_mi)
+    inner = [points[i] for i in range(first, last) if start_mi < cum[i] < end_mi]
+    return [
+        interpolate_along(points, cum, start_mi),
+        *inner,
+        interpolate_along(points, cum, end_mi),
+    ]
+
+
 def resample(points: Sequence[LatLon], step_mi: float) -> list[LatLon]:
     """Evenly spaced points every `step_mi` along the polyline, including both ends."""
     cum = cumulative_miles(points)

@@ -1,0 +1,176 @@
+from datetime import timedelta
+
+import pytest
+from django.core.cache import cache
+
+from planner.domain.geo import resample
+from planner.domain.models import LatLon, RiskLevel
+from planner.providers.base import Place, ProviderError, RouteOption
+from planner.services.heatmap import HEATMAP_HOURS, HeatmapBuilder
+from planner.services.plan_trip import TripPlanner, TripRequest, _detour_points
+from planner.services.weather import WeatherService
+from planner.tests.conftest import FakeRouting, FakeWeather, calm
+
+DEN = Place("Denver, CO", 39.7392, -104.9903)
+SLC = Place("Salt Lake City, UT", 40.7608, -111.8910)
+
+
+def _service(weather) -> WeatherService:
+    return WeatherService(weather, cache, grid_deg=0.25, ttl_s=600, model="test")
+
+
+def _request(departure, *, load=36_000, interval=25) -> TripRequest:
+    return TripRequest(DEN, SLC, departure, load, interval)
+
+
+def test_plan_three_routes_with_checkpoints_and_etas(tomtom_routes, departure) -> None:
+    planner = TripPlanner(FakeRouting(tomtom_routes), _service(FakeWeather(calm)), tare_lb=35_000)
+    plan = planner.plan(_request(departure, interval=25))
+
+    assert [r.id for r in plan.routes] == ["A", "B", "C"]
+    for route, option in zip(plan.routes, tomtom_routes, strict=True):
+        cps = route.scored.checkpoints
+        assert cps[0].mile == 0 and cps[0].eta == departure
+        assert cps[-1].mile == pytest.approx(route.distance_mi)
+        assert cps[-1].eta == departure + timedelta(seconds=option.duration_s)
+        assert all(a.eta <= b.eta for a, b in zip(cps, cps[1:], strict=False))
+        assert sum(cp.owned_miles for cp in cps) == pytest.approx(route.distance_mi)
+        assert all(cp.risk and cp.risk.level == RiskLevel.LOW for cp in cps)
+        assert sum(s.end_mile - s.start_mile for s in route.segments) == pytest.approx(
+            route.distance_mi
+        )
+    # All calm: travel time decides, so the fastest TomTom route (A) wins.
+    assert plan.recommended_id == "A"
+    assert "travel time" in plan.reason or "h" in plan.reason
+
+
+@pytest.mark.parametrize("interval", [10, 25, 50])
+def test_checkpoint_spacing_follows_interval(tomtom_routes, departure, interval) -> None:
+    planner = TripPlanner(FakeRouting(tomtom_routes), _service(FakeWeather(calm)), tare_lb=0)
+    route = planner.plan(_request(departure, interval=interval)).routes[0]
+    miles = [cp.mile for cp in route.scored.checkpoints]
+    assert miles[1] - miles[0] == pytest.approx(interval)
+    assert len(miles) == int(route.distance_mi // interval) + 1 + (
+        route.distance_mi % interval > 0.05
+    )
+
+
+def test_eta_based_sampling_picks_weather_at_arrival_hour(tomtom_routes, departure) -> None:
+    storm_hour = departure + timedelta(hours=4)
+
+    def storm_after_4h(cell, hour):
+        return (10, 60, 0, 0) if hour >= storm_hour else (5, 10, 0, 0)
+
+    planner = TripPlanner(
+        FakeRouting(tomtom_routes), _service(FakeWeather(storm_after_4h)), tare_lb=0
+    )
+    route = planner.plan(_request(departure)).routes[0]
+    for cp in route.scored.checkpoints:
+        expected = RiskLevel.NO_TRAVEL if cp.forecast_hour >= storm_hour else RiskLevel.LOW
+        assert cp.risk.level == expected
+
+
+def test_storm_on_fastest_route_changes_recommendation(tomtom_routes, departure) -> None:
+    # Route A (fastest) runs north through Wyoming; route C (slowest) stays south in Colorado.
+    def wyoming_wind(cell, hour):
+        return (20, 50, 0, 0) if cell.lat >= 41.0 else (5, 10, 0, 0)
+
+    planner = TripPlanner(
+        FakeRouting(tomtom_routes), _service(FakeWeather(wyoming_wind)), tare_lb=0
+    )
+    plan = planner.plan(_request(departure, load=36_000))
+    by_id = {r.id: r for r in plan.routes}
+    # 50 mph gusts with a 36,000 lb load is No Travel.
+    assert by_id["A"].scored.summary.no_travel_miles > 0
+    best = by_id[plan.recommended_id]
+    assert best.scored.summary.no_travel_miles == min(
+        r.scored.summary.no_travel_miles for r in plan.routes
+    )
+    assert plan.recommended_id != "A"
+    assert by_id["A"].rank == 3
+
+
+def test_unknown_weather_is_reported_not_scored(tomtom_routes, departure) -> None:
+    weather = FakeWeather(calm)
+    service = _service(weather)
+    weather.fail_cells = {service.cell_for(LatLon(39.75, -105.0))}
+    plan = TripPlanner(FakeRouting(tomtom_routes), service, tare_lb=0).plan(_request(departure))
+    assert plan.routes[0].scored.summary.unknown_miles > 0
+    assert any("unavailable" in w for w in plan.warnings)
+
+
+def test_weather_cells_are_snapped_deduped_and_cached(tomtom_routes, departure) -> None:
+    weather = FakeWeather(calm)
+    planner = TripPlanner(FakeRouting(tomtom_routes), _service(weather), tare_lb=0)
+    planner.plan(_request(departure, interval=10))
+    first_batch = list(weather.requested)
+    assert len(first_batch) == len(set(first_batch))
+    assert all((c.lat / 0.25).is_integer() and (c.lon / 0.25).is_integer() for c in first_batch)
+
+    planner.plan(_request(departure, interval=10))
+    assert weather.requested == first_batch  # second plan served from cache
+
+
+def test_routing_weight_includes_tare(tomtom_routes, departure) -> None:
+    routing = FakeRouting(tomtom_routes)
+    TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=35_000).plan(
+        _request(departure, load=45_000)
+    )
+    assert routing.calls[0]["weight"] == round(80_000 * 0.45359237)
+    assert routing.calls[0]["max_alternatives"] == 2
+
+
+def _shifted(option: RouteOption, dlat: float) -> RouteOption:
+    pts = option.points
+    n = len(pts)
+    bent = [LatLon(p.lat + dlat * (1 - abs(2 * i / (n - 1) - 1)), p.lon) for i, p in enumerate(pts)]
+    return RouteOption(bent, option.length_m * 1.1, option.duration_s * 1.2, [])
+
+
+def test_detour_fallback_fills_to_three_routes(tomtom_routes, departure) -> None:
+    main = tomtom_routes[:1]
+    routing = FakeRouting(main, detours=[_shifted(main[0], 1.5), _shifted(main[0], -1.5)])
+    plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
+    assert [r.source for r in plan.routes] == ["routing_api", "detour", "detour"]
+    assert any("detour" in n for n in plan.notices)
+    assert sum(1 for c in routing.calls if c["via"] is not None) == 2
+
+
+def test_duplicate_alternatives_are_dropped(tomtom_routes, departure) -> None:
+    routing = FakeRouting([tomtom_routes[0], tomtom_routes[0]])
+    plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
+    assert len(plan.routes) == 1
+    assert any("Only 1" in n for n in plan.notices)
+
+
+def test_no_routes_raises(departure) -> None:
+    with pytest.raises(ProviderError) as err:
+        TripPlanner(FakeRouting([]), _service(FakeWeather(calm)), tare_lb=0).plan(
+            _request(departure)
+        )
+    assert err.value.code == "no_route"
+
+
+def test_detour_points_are_perpendicular_and_offset() -> None:
+    line = [LatLon(40.0, -110.0), LatLon(40.0, -100.0)]
+    a, b = _detour_points(line)
+    assert a.lon == pytest.approx(-105.0, abs=0.01) and b.lon == pytest.approx(-105.0, abs=0.01)
+    assert a.lat > 40.5 and b.lat < 39.5
+
+
+def test_heatmap_frames_shape_and_values(tomtom_routes, departure) -> None:
+    def windy(cell, hour):
+        return (30, 40, 0.3, 0.0)
+
+    builder = HeatmapBuilder(_service(FakeWeather(windy)), max_points=150)
+    routes = [resample(r.points, 20) for r in tomtom_routes]
+    heat = builder.build(routes, departure, load_lb=45_000)
+    assert len(heat.hours) == HEATMAP_HOURS + 1
+    assert heat.hours[0] == departure
+    assert 0 < len(heat.points) <= 150
+    for metric in ("risk", "gust", "rain", "snow"):
+        assert len(heat.frames[metric]) == HEATMAP_HOURS + 1
+        assert all(len(row) == len(heat.points) for row in heat.frames[metric])
+    # 40 mph gust (High) with a 45,000 lb load is Severe.
+    assert heat.frames["risk"][0][0] == int(RiskLevel.SEVERE)
+    assert heat.frames["gust"][0][0] == 40
