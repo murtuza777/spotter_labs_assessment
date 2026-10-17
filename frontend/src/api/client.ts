@@ -13,10 +13,14 @@ export class ApiError extends Error {
   }
 }
 
+// Empty in dev (Vite proxies /api). In production, the Render API origin, e.g.
+// VITE_API_BASE_URL=https://truck-weather-api.onrender.com
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(path, {
+    response = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: { 'Content-Type': 'application/json', ...init?.headers },
     })

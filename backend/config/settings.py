@@ -30,6 +30,7 @@ MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -61,6 +62,23 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+# Vercel preview deployments get per-commit URLs; allow them for this project only.
+CORS_ALLOWED_ORIGIN_REGEXES = env.list("CORS_ALLOWED_ORIGIN_REGEXES", default=[])
+
+# Behind Render's TLS-terminating proxy.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_HSTS_SECONDS = 0 if DEBUG else 3600
+SILENCED_SYSTEM_CHECKS = [
+    # Stateless JSON API: no cookies, sessions or forms, so there is nothing for CSRF to protect.
+    "security.W003",
+    # Render terminates TLS and redirects HTTP itself; its internal health check uses plain
+    # HTTP, which a Django-level redirect would break.
+    "security.W008",
+    # HSTS subdomains/preload: the API lives on the shared onrender.com domain, not ours.
+    "security.W005",
+    "security.W021",
+]
 
 # Third-party providers
 TOMTOM_API_KEY = env("TOMTOM_API_KEY", default="")
