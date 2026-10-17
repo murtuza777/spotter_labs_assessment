@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { HeatmapResponse, PlannedRoute, TripPlan } from '../api/types'
 import { formatDuration } from './format'
 import { boundsOf, cumulativeMiles, decodePolyline, interpolateAlong, interpolateSeries } from './geo'
-import { buildHeatmapGeoJSON, heatmapGeometry, propertyName, toWeight, weightExpression } from './heatmap'
+import { buildHeatmapGeoJSON, frameOpacities, heatmapGeometry, toWeight } from './heatmap'
 import { severityIndex } from './risk'
 import { buildRouteModels, truckPosition } from './routeModel'
 
@@ -96,14 +96,12 @@ describe('heatmap', () => {
     expect([0, 1, 2, 3, 4].map((s) => toWeight('risk', s))).toEqual([0.2, 0.4, 0.6, 0.8, 1])
   })
 
-  it('blends neighbouring hours for fractional slider positions', () => {
-    expect(weightExpression('risk', 3, 48)).toEqual(['coalesce', ['get', 'r3'], 0])
-    expect(weightExpression('gust', 3.25, 48)).toEqual([
-      '+',
-      ['*', 0.75, ['coalesce', ['get', 'g3'], 0]],
-      ['*', 0.25, ['coalesce', ['get', 'g4'], 0]],
-    ])
-    expect(weightExpression('risk', 48, 48)).toEqual(['coalesce', ['get', propertyName('risk', 48)], 0])
+  it('cross-fades the two hours around a fractional slider position', () => {
+    expect(frameOpacities(3, 48)).toEqual({ 3: 1 })
+    expect(frameOpacities(3.25, 48)).toEqual({ 3: 0.75, 4: 0.25 })
+    expect(frameOpacities(48, 48)).toEqual({ 48: 1 })
+    expect(frameOpacities(60, 48)).toEqual({ 48: 1 })
+    expect(frameOpacities(-1, 48)).toEqual({ 0: 1 })
   })
 
   it('chooses intensity so a uniform grid reproduces its weight', () => {

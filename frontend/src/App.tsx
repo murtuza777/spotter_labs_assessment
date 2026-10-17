@@ -94,7 +94,7 @@ function App() {
           <TripMap plan={planMutation.isPending ? undefined : plan} heatmap={heatmap.data} />
         </Suspense>
         {plan && !planMutation.isPending && (
-          <div className="pointer-events-none absolute inset-x-3 bottom-8 z-10 mx-auto max-w-3xl">
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 mx-auto max-w-3xl sm:inset-x-3 sm:bottom-8">
             <ForecastSlider
               departure={plan.request.departure_time}
               arrivalHours={selected ? selected.duration_s / 3600 : null}

@@ -72,10 +72,13 @@ export const RouteLayers = memo(function RouteLayers({ plan }: { plan: TripPlan 
   )
 })
 
-/** Checkpoints whose ETA is within half an hour of the slider get a thick ring. */
+/**
+ * Checkpoints of the selected route. The ones whose ETA is within half an hour of the slider
+ * get a thick ring through feature-state (set by NearCheckpoints), which unlike a data-driven
+ * paint expression does not make MapLibre re-tile the source on every slider frame.
+ */
 function CheckpointLayer({ selected }: { selected: string }) {
-  const hour = useTripStore((s) => s.hour)
-  const near: ExpressionSpecification = ['<', ['abs', ['-', ['get', 'etaH'], hour]], 0.5]
+  const near: ExpressionSpecification = ['boolean', ['feature-state', 'near'], false]
   return (
     <Layer
       id={CHECKPOINT_LAYER}

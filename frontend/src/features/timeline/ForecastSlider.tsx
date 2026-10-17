@@ -50,7 +50,7 @@ export function ForecastSlider({ departure, arrivalHours, heatmapState, onRetry 
   const arrivalPct = arrivalHours !== null && arrivalHours <= MAX_HOUR ? (arrivalHours / MAX_HOUR) * 100 : null
 
   return (
-    <div className="pointer-events-auto rounded-xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
+    <div className="pointer-events-auto rounded-xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur sm:p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <button
@@ -78,7 +78,7 @@ export function ForecastSlider({ departure, arrivalHours, heatmapState, onRetry 
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {heatmapState === 'loading' && <span className="text-[11px] text-slate-500">Loading forecast grid…</span>}
           {heatmapState === 'error' && (
             <button type="button" onClick={onRetry} className="text-[11px] font-medium text-red-600 underline">
@@ -92,7 +92,7 @@ export function ForecastSlider({ departure, arrivalHours, heatmapState, onRetry 
                 type="button"
                 aria-pressed={metric === m}
                 onClick={() => setHeatmapMetric(m)}
-                className={`rounded px-2 py-1 text-xs transition ${
+                className={`rounded px-1.5 py-1 text-xs transition sm:px-2 ${
                   metric === m ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
                 }`}
               >

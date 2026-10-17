@@ -44,14 +44,19 @@ export function segmentsGeoJSON(plan: TripPlan): FeatureCollection<LineString> {
   }
 }
 
+/** Numeric feature id (required for feature-state) for a route's checkpoint. */
+export function checkpointFeatureId(routeIndex: number, checkpointIndex: number): number {
+  return routeIndex * 100_000 + checkpointIndex
+}
+
 export function checkpointsGeoJSON(plan: TripPlan): FeatureCollection<Point> {
   const departure = Date.parse(plan.request.departure_time)
   return {
     type: 'FeatureCollection',
-    features: plan.routes.flatMap((r) =>
+    features: plan.routes.flatMap((r, routeIndex) =>
       r.checkpoints.map((cp) => ({
         type: 'Feature' as const,
-        id: `${r.id}-${cp.index}`,
+        id: checkpointFeatureId(routeIndex, cp.index),
         properties: {
           routeId: r.id,
           index: cp.index,

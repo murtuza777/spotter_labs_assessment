@@ -1,14 +1,20 @@
 import { memo, useMemo } from 'react'
 import { Layer, Source } from 'react-map-gl/maplibre'
-import type { HeatmapResponse } from '../../api/types'
-import { HEATMAP_COLOR, buildHeatmapGeoJSON, heatmapGeometry, weightExpression } from '../../lib/heatmap'
+import type { HeatmapMetric, HeatmapResponse } from '../../api/types'
+import { HEATMAP_COLOR, buildHeatmapGeoJSON, frameOpacities, heatmapGeometry, propertyName } from '../../lib/heatmap'
 import { useTripStore } from '../../store/tripStore'
 
-export const HEATMAP_LAYER_ID = 'weather-heatmap'
+const heatmapLayerId = (hour: number) => `weather-heatmap-${hour}`
+const MAX_OPACITY = 0.9
+const NO_TRANSITION = { duration: 0, delay: 0 }
 
 /**
- * The GeoJSON (every metric, every hour) is uploaded once per heatmap response. Moving the
- * slider re-renders only this component and changes one paint property.
+ * One heatmap layer per forecast hour, all built once per response (and per metric).
+ *
+ * The slider only changes `heatmap-opacity`, cross-fading the two hours around the slider
+ * position. Opacity is not data-driven, so MapLibre neither re-tiles the source nor
+ * re-uploads anything, and layers at opacity 0 are skipped entirely when drawing. Changing
+ * `heatmap-weight` (or visibility) per frame instead would reload the source every frame.
  */
 export const HeatmapLayer = memo(function HeatmapLayer({ data, beforeId }: { data: HeatmapResponse; beforeId?: string }) {
   const geojson = useMemo(() => buildHeatmapGeoJSON(data), [data])
@@ -17,27 +23,54 @@ export const HeatmapLayer = memo(function HeatmapLayer({ data, beforeId }: { dat
     return heatmapGeometry(data.grid_step_deg, meanLat)
   }, [data])
 
-  const hour = useTripStore((s) => s.hour)
   const metric = useTripStore((s) => s.heatmapMetric)
-  const visible = useTripStore((s) => s.heatmapVisible)
-  const maxHour = data.hours.length - 1
+  const hours = data.hours.length
 
   return (
     <Source id="heatmap" type="geojson" data={geojson}>
-      <Layer
-        id={HEATMAP_LAYER_ID}
-        type="heatmap"
-        beforeId={beforeId}
-        maxzoom={10}
-        layout={{ visibility: visible ? 'visible' : 'none' }}
-        paint={{
-          'heatmap-weight': weightExpression(metric, hour, maxHour),
-          'heatmap-intensity': intensity,
-          'heatmap-radius': radius,
-          'heatmap-color': HEATMAP_COLOR,
-          'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.9, 10, 0],
-        }}
-      />
+      {Array.from({ length: hours }, (_, h) => (
+        <HourLayer
+          key={h}
+          hour={h}
+          maxHour={hours - 1}
+          metric={metric}
+          radius={radius}
+          intensity={intensity}
+          beforeId={beforeId}
+        />
+      ))}
     </Source>
   )
 })
+
+interface HourLayerProps {
+  hour: number
+  maxHour: number
+  metric: HeatmapMetric
+  radius: ReturnType<typeof heatmapGeometry>['radius']
+  intensity: number
+  beforeId?: string
+}
+
+function HourLayer({ hour, maxHour, metric, radius, intensity, beforeId }: HourLayerProps) {
+  // Subscribe to this layer's own opacity only, so a slider move re-renders at most the
+  // few layers whose opacity actually changes.
+  const opacity = useTripStore((s) => (s.heatmapVisible ? (frameOpacities(s.hour, maxHour)[hour] ?? 0) : 0))
+  return (
+    <Layer
+      id={heatmapLayerId(hour)}
+      type="heatmap"
+      source="heatmap"
+      beforeId={beforeId}
+      maxzoom={10}
+      paint={{
+        'heatmap-weight': ['coalesce', ['get', propertyName(metric, hour)], 0],
+        'heatmap-intensity': intensity,
+        'heatmap-radius': radius,
+        'heatmap-color': HEATMAP_COLOR,
+        'heatmap-opacity': opacity * MAX_OPACITY,
+        'heatmap-opacity-transition': NO_TRANSITION,
+      }}
+    />
+  )
+}

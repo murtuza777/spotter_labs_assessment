@@ -15,6 +15,7 @@ import { CheckpointPopup } from './CheckpointPopup'
 import { HeatmapLayer } from './HeatmapLayer'
 import { Legend } from './Legend'
 import './maplibre'
+import { NearCheckpoints } from './NearCheckpoints'
 import { CHECKPOINT_LAYER, ROUTE_HIT_LAYER, ROUTES_BOTTOM_LAYER, RouteLayers } from './RouteLayers'
 import { TruckMarker } from './TruckMarker'
 
@@ -126,6 +127,7 @@ export default function TripMap({ plan, heatmap }: Props) {
       <ScaleControl position="bottom-right" unit="imperial" />
 
       {plan && <RouteLayers plan={plan} />}
+      {plan && selectedId && <NearCheckpoints plan={plan} selectedId={selectedId} />}
       {plan && heatmap && <HeatmapLayer data={heatmap} beforeId={ROUTES_BOTTOM_LAYER} />}
 
       {origin && (

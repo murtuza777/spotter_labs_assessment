@@ -39,14 +39,16 @@ export function toWeight(metric: HeatmapMetric, value: number): number {
   return Math.round(((severityIndex(metric, value) + 1) / 5) * 1000) / 1000
 }
 
-/** Weight at a fractional hour: a linear blend of the two neighbouring hourly frames. */
-export function weightExpression(metric: HeatmapMetric, hour: number, maxHour: number): ExpressionSpecification {
-  const h0 = Math.max(0, Math.min(maxHour, Math.floor(hour)))
-  const h1 = Math.min(maxHour, h0 + 1)
-  const t = Math.round((hour - h0) * 1000) / 1000
-  const at = (h: number): ExpressionSpecification => ['coalesce', ['get', propertyName(metric, h)], 0]
-  if (t === 0 || h0 === h1) return at(h0)
-  return ['+', ['*', 1 - t, at(h0)], ['*', t, at(h1)]]
+/**
+ * Opacity of each hourly frame at a fractional slider position: the two neighbouring hours
+ * cross-fade linearly, every other hour is 0. Returns a sparse { hour: opacity } map.
+ */
+export function frameOpacities(hour: number, maxHour: number): Record<number, number> {
+  const clamped = Math.max(0, Math.min(maxHour, hour))
+  const h0 = Math.floor(clamped)
+  const t = Math.round((clamped - h0) * 1000) / 1000
+  if (t === 0 || h0 >= maxHour) return { [h0]: 1 }
+  return { [h0]: 1 - t, [h0 + 1]: t }
 }
 
 const hexToRgba = (hex: string, alpha: number) => {
