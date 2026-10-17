@@ -96,7 +96,10 @@ def test_unknown_weather_is_reported_not_scored(tomtom_routes, departure) -> Non
     weather.fail_cells = {service.cell_for(LatLon(39.75, -105.0))}
     plan = TripPlanner(FakeRouting(tomtom_routes), service, tare_lb=0).plan(_request(departure))
     assert plan.routes[0].scored.summary.unknown_miles > 0
-    assert any("No forecast was available" in w for w in plan.warnings)
+    # Every route starts in the failed cell, so none has a complete forecast: provisional pick.
+    assert plan.status.value == "provisional"
+    assert any("provisional pick" in w for w in plan.warnings)
+    assert all(r.eligibility == "incomplete_forecast" for r in plan.routes)
 
 
 def test_weather_cells_are_snapped_deduped_and_cached(tomtom_routes, departure) -> None:
@@ -133,8 +136,11 @@ def test_detour_fallback_fills_to_three_routes(tomtom_routes, departure) -> None
     plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
     assert [r.source for r in plan.routes] == ["routing_api", "detour", "detour"]
     assert any(
-        "Route B and C are TomTom truck routing through a waypoint" in n for n in plan.notices
+        "Route B and C are detours: TomTom truck routing through a waypoint" in n
+        for n in plan.notices
     )
+    assert plan.routes[0].waypoint is None
+    assert all(r.waypoint is not None for r in plan.routes[1:])
     assert plan.meta["routing_lookups"] == 3  # 1 alternatives request + 2 detours, no more
     assert sum(1 for c in routing.calls if c["via"] is not None) == 2
 
@@ -143,7 +149,7 @@ def test_duplicate_alternatives_are_dropped(tomtom_routes, departure) -> None:
     routing = FakeRouting([tomtom_routes[0], tomtom_routes[0]])
     plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
     assert len(plan.routes) == 1
-    assert any("Only 1" in n for n in plan.notices)
+    assert any("Only 1 meaningful" in n and "(1 more was the same road)" in n for n in plan.notices)
 
 
 def test_no_routes_raises(departure) -> None:
@@ -196,7 +202,9 @@ def test_failed_detours_show_fewer_routes_honestly(tomtom_routes, departure) -> 
     routing = FakeRouting(tomtom_routes[:1], detours=[])  # detour calls return nothing
     plan = TripPlanner(routing, _service(FakeWeather(calm)), tare_lb=0).plan(_request(departure))
     assert len(plan.routes) == 1
-    assert plan.notices == ["Only 1 distinct truck route(s) could be found for this trip."]
+    [notice] = plan.notices
+    assert notice.startswith("Only 1 meaningful route(s) could be found. TomTom returned 1")
+    assert "TomTom found no truck route through a waypoint" in notice
 
 
 def test_checkpoints_outside_forecast_coverage_are_unknown(tomtom_routes, departure) -> None:
@@ -221,3 +229,76 @@ def test_heatmap_reports_unknown_cells_and_stats(tomtom_routes, departure) -> No
     weather.fail_cells = set()
     again = HeatmapBuilder(service, max_points=60).build(routes, departure, load_lb=0)
     assert again.meta["weather"]["fetched"] == 0  # all from cache
+
+
+def _scaled(option: RouteOption, *, dlat: float, length: float, duration: float) -> RouteOption:
+    bent = _shifted(option, dlat)
+    return RouteOption(bent.points, option.length_m * length, option.duration_s * duration, [])
+
+
+@pytest.mark.parametrize(
+    ("length", "duration", "why"),
+    [
+        (1.6, 1.2, "1.60x the fastest route's distance"),
+        (1.2, 1.9, "1.90x the fastest route's drive time"),
+    ],
+)
+def test_unreasonable_detours_are_rejected(tomtom_routes, departure, length, duration, why) -> None:
+    main = tomtom_routes[0]
+    detours = [_scaled(main, dlat=1.5, length=length, duration=duration)] * 2
+    plan = TripPlanner(
+        FakeRouting([main], detours=detours), _service(FakeWeather(calm)), tare_lb=0
+    ).plan(_request(departure))
+    assert [r.source for r in plan.routes] == ["routing_api"]
+    assert why in plan.notices[-1]
+
+
+def test_detour_that_repeats_the_main_route_is_rejected(tomtom_routes, departure) -> None:
+    main = tomtom_routes[0]
+    near_copy = RouteOption(main.points, main.length_m * 1.01, main.duration_s * 1.01, [])
+    plan = TripPlanner(
+        FakeRouting([main], detours=[near_copy, near_copy]), _service(FakeWeather(calm)), tare_lb=0
+    ).plan(_request(departure))
+    assert len(plan.routes) == 1
+    assert "mostly repeat an existing route" in plan.notices[-1]
+
+
+def test_out_and_back_spur_is_detected() -> None:
+    from planner.services.plan_trip import _doubles_back
+
+    # East 50 mi, then 20 mi north to the waypoint and straight back, then east again.
+    east = [LatLon(40.0, -105.0 + i * 0.02) for i in range(60)]
+    spur_up = [LatLon(40.0 + i * 0.01, east[-1].lon) for i in range(1, 30)]
+    spur_down = list(reversed(spur_up))[1:] + [east[-1]]
+    on = [LatLon(40.0, east[-1].lon + i * 0.02) for i in range(1, 60)]
+    route = east + spur_up + spur_down + on
+    assert _doubles_back(route, spur_up[-1])
+    through = east + on
+    assert not _doubles_back(through, east[-1])
+
+
+def test_route_similarity_is_geometric(tomtom_routes) -> None:
+    from planner.domain.geo import route_similarity
+
+    a, b, c = (r.points for r in tomtom_routes)
+    assert route_similarity(a, a) == pytest.approx(1.0)
+    assert route_similarity(a, list(reversed(a))) == pytest.approx(1.0)
+    assert route_similarity(a, b) < 0.5  # Denver->SLC via I-80 vs via I-70
+    # The same road with extra vertices (densified) is still the same road.
+    dense = [
+        q
+        for p1, p2 in zip(a, a[1:], strict=False)
+        for q in (p1, LatLon((p1.lat + p2.lat) / 2, (p1.lon + p2.lon) / 2))
+    ]
+    assert route_similarity(a, dense + [a[-1]]) > 0.97
+
+
+def test_checkpoints_report_the_queried_cell_and_risk_factors(tomtom_routes, departure) -> None:
+    plan = TripPlanner(FakeRouting(tomtom_routes), _service(FakeWeather(calm)), tare_lb=0).plan(
+        _request(departure)
+    )
+    cp = plan.routes[0].scored.checkpoints[3]
+    assert cp.weather_cell == LatLon(round(cp.point.lat * 4) / 4, round(cp.point.lon * 4) / 4)
+    names = [f.name for f in cp.risk.factors]
+    assert names == ["wind", "rain", "snow"]
+    assert cp.risk.level == max(f.level for f in cp.risk.factors)

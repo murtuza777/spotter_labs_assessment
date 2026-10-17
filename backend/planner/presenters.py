@@ -24,7 +24,21 @@ def plan_json(plan: TripPlan) -> dict:
             "wind_metric": plan.request.wind_metric,
         },
         "recommended_route_id": plan.recommended_id,
-        "recommendation": {"reason": plan.reason, "warnings": plan.warnings},
+        "recommendation": {
+            # "recommended", "provisional" (no route has a complete forecast) or "none"
+            # (every route has No Travel conditions; recommended_route_id is null).
+            "status": plan.status.value,
+            "route_id": plan.recommended_id,
+            "reason": plan.reason,
+            "exclusions": [{"route_id": e.route_id, "reason": e.reason} for e in plan.exclusions],
+            "warnings": plan.warnings,
+            "ranking": [
+                "Severe miles",
+                "High miles",
+                "average risk",
+                "travel time",
+            ],
+        },
         "routes": [_route(r) for r in plan.routes],
         "notices": plan.notices,
         "meta": plan.meta,
@@ -41,6 +55,10 @@ def _route(route: PlannedRoute) -> dict:
         "id": route.id,
         "source": route.source,
         "rank": route.rank,
+        "eligibility": route.eligibility,
+        "waypoint": None
+        if route.waypoint is None
+        else {"lat": round(route.waypoint.lat, 5), "lon": round(route.waypoint.lon, 5)},
         "distance_mi": round(route.distance_mi, 1),
         "duration_s": round(route.scored.duration_s),
         "arrival_time": iso(route.arrival),
@@ -48,6 +66,10 @@ def _route(route: PlannedRoute) -> dict:
         "summary": {
             "miles_by_level": {lvl.slug: round(m, 1) for lvl, m in s.miles_by_level.items()},
             "unknown_miles": round(s.unknown_miles, 1),
+            # Share of the route's miles that have a forecast (0-1).
+            "forecast_coverage": round(1 - s.unknown_miles / route.distance_mi, 4)
+            if route.distance_mi
+            else 0.0,
             "avg_risk": round(s.avg_risk, 2),
             "max_level": s.max_level.slug if s.max_level is not None else None,
         },
@@ -73,6 +95,10 @@ def _checkpoint(cp: Checkpoint) -> dict:
         "lon": round(cp.point.lon, 5),
         "eta": iso(cp.eta),
         "forecast_hour": iso(cp.forecast_hour),
+        # The forecast grid cell actually queried for this checkpoint.
+        "weather_cell": None
+        if cp.weather_cell is None
+        else {"lat": cp.weather_cell.lat, "lon": cp.weather_cell.lon},
         "weather": None
         if w is None
         else {
@@ -87,6 +113,18 @@ def _checkpoint(cp: Checkpoint) -> dict:
             "level": cp.risk.level.slug,
             "score": int(cp.risk.level),
             "reasons": list(cp.risk.reasons),
+            "factors": [
+                {
+                    "name": f.name,
+                    "label": f.label,
+                    "value": round(f.value, 3),
+                    "unit": f.unit,
+                    "base_level": f.base_level.slug,
+                    "level": f.level.slug,
+                    "load_rule": f.load_rule,
+                }
+                for f in cp.risk.factors
+            ],
         },
     }
 

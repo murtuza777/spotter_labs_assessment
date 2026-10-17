@@ -13,13 +13,13 @@ from planner.domain.geo import (
     cumulative_miles,
     haversine_mi,
     interpolate_along,
-    resample,
+    route_similarity,
+    shared_fraction,
     simplify,
     slice_polyline,
-    snap,
 )
 from planner.domain.models import Checkpoint, LatLon, RiskLevel, ScoredRoute
-from planner.domain.recommend import explain, rank, warnings
+from planner.domain.recommend import Exclusion, Status, eligibility, recommend
 from planner.domain.risk import assess
 from planner.domain.sampling import checkpoint_miles
 from planner.domain.scoring import owned_miles, summarize
@@ -33,8 +33,18 @@ LB_TO_KG = 0.45359237
 ROUTE_IDS = ("A", "B", "C")
 TARGET_ROUTES = 3
 DISPLAY_TOLERANCE_M = 30
-_OVERLAP_CELL_DEG = 0.05
-_DUPLICATE_OVERLAP = 0.9
+
+# Two routes sharing at least this much road (see geo.route_similarity) are the same route.
+DUPLICATE_SIMILARITY = 0.95
+# A waypoint detour is only offered if it is genuinely different and still a reasonable trip.
+DETOUR_MAX_SIMILARITY = 0.85
+DETOUR_MAX_DISTANCE_RATIO = 1.4
+DETOUR_MAX_DURATION_RATIO = 1.5
+# Waypoint placement: perpendicular to the origin->destination line at the main route's
+# midpoint, offset by this share of the straight-line distance, clamped to [min, max] miles.
+DETOUR_OFFSET_SHARE = 0.15
+DETOUR_OFFSET_MIN_MI = 15.0
+DETOUR_OFFSET_MAX_MI = 100.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,24 +75,36 @@ class PlannedRoute:
     scored: ScoredRoute
     segments: list[RiskSegment] = field(default_factory=list)
     rank: int = 0
+    eligibility: str = "eligible"
+    waypoint: LatLon | None = None  # detours only: the waypoint TomTom was asked to pass
 
 
 @dataclass(slots=True)
 class TripPlan:
     request: TripRequest
     routes: list[PlannedRoute]
-    recommended_id: str
+    recommended_id: str | None  # None when every route has No Travel conditions
+    status: Status
     reason: str
+    exclusions: list[Exclusion]
     warnings: list[str]
     notices: list[str]
     # Request accounting: provider calls, weather cache use and timings (also logged).
     meta: dict = field(default_factory=dict)
 
 
+@dataclass(frozen=True, slots=True)
+class _Candidate:
+    option: RouteOption
+    source: str  # "routing_api" or "detour"
+    via: LatLon | None = None
+
+
 @dataclass(slots=True)
 class _Prepared:
     option: RouteOption
     source: str
+    via: LatLon | None
     cum: list[float]
     scale: float  # official miles per polyline mile
     distance_mi: float
@@ -99,7 +121,7 @@ class TripPlanner:
         t0 = time.perf_counter()
         options, notices, routing_lookups = self._candidate_routes(req)
         routing_ms = round((time.perf_counter() - t0) * 1000)
-        prepared = [self._prepare(opt, src, req) for opt, src in options]
+        prepared = [self._prepare(c, req) for c in options]
 
         all_cps = [cp for p in prepared for cp in p.checkpoints]
         series, weather_stats = self._weather.series_with_stats(
@@ -130,11 +152,13 @@ class TripPlanner:
                     geometry=simplify(prep.option.points, DISPLAY_TOLERANCE_M),
                     scored=scored,
                     segments=_risk_segments(prep),
+                    eligibility=eligibility(scored).value,
+                    waypoint=prep.via,
                 )
             )
 
-        ranked = rank([r.scored for r in routes])
-        order = {s.id: i + 1 for i, s in enumerate(ranked)}
+        rec = recommend([r.scored for r in routes])
+        order = {s.id: i + 1 for i, s in enumerate(rec.order)}
         for r in routes:
             r.rank = order[r.id]
         meta = {
@@ -158,25 +182,28 @@ class TripPlanner:
         return TripPlan(
             request=req,
             routes=routes,
-            recommended_id=ranked[0].id,
-            reason=explain(ranked),
-            warnings=warnings(ranked),
+            recommended_id=rec.route_id,
+            status=rec.status,
+            reason=rec.reason,
+            exclusions=rec.exclusions,
+            warnings=rec.warnings,
             notices=notices,
             meta=meta,
         )
 
     # -- routes ---------------------------------------------------------------------------
 
-    def _candidate_routes(
-        self, req: TripRequest
-    ) -> tuple[list[tuple[RouteOption, str]], list[str], int]:
+    def _candidate_routes(self, req: TripRequest) -> tuple[list[_Candidate], list[str], int]:
         """Up to 3 distinct routes, the notices to show about them, and the routing lookups made
         (calls into the routing layer; repeats within the route-cache TTL never reach TomTom).
 
-        TomTom alternatives come first. Only if it returns fewer than 3 distinct routes do we
-        ask TomTom for routes through a waypoint either side of the main route's midpoint.
-        Those are real, drivable TomTom truck routes, labelled "detour" everywhere they
-        appear; nothing is synthesized, and if they fail fewer routes are shown.
+        TomTom alternatives come first; one sharing >= 95 % of its road with an earlier one is
+        the same route and is dropped. Only if fewer than 3 distinct routes remain do we ask
+        TomTom for a route through a waypoint on either side of the main route (see
+        `_detour_points`). Those are real TomTom truck routes, kept only if they are distinct,
+        reasonable and don't double back (`_detour_rejection`), and labelled "detour"
+        everywhere they appear. Nothing is synthesized: if no detour qualifies, fewer routes
+        are shown with a notice saying why.
         """
         weight_kg = round((req.load_lb + self._tare_lb) * LB_TO_KG)
         calls = 0
@@ -193,51 +220,67 @@ class TripPlanner:
                 via=via,
             )
 
-        found: list[tuple[RouteOption, str]] = []
-        signatures: list[set[tuple[float, float]]] = []
-
-        def add(option: RouteOption, source: str) -> None:
-            if len(found) >= TARGET_ROUTES or len(option.points) < 2:
-                return
-            sig = _signature(option.points)
-            if any(_overlap(sig, other) > _DUPLICATE_OVERLAP for other in signatures):
-                return
-            found.append((option, source))
-            signatures.append(sig)
-
-        for option in call(alternatives=TARGET_ROUTES - 1):
-            add(option, "routing_api")
+        provider = call(alternatives=TARGET_ROUTES - 1)
+        found: list[_Candidate] = []
+        for option in provider:
+            if len(found) < TARGET_ROUTES and not any(
+                route_similarity(option.points, c.option.points) >= DUPLICATE_SIMILARITY
+                for c in found
+            ):
+                found.append(_Candidate(option, "routing_api"))
         if not found:
             raise ProviderError(
                 "no_route", "No truck route was found between those places.", status=422
             )
 
         notices: list[str] = []
+        if len(found) >= TARGET_ROUTES:
+            return found, notices, calls
+
         api_count = len(found)
+        duplicates = len(provider) - api_count
+        fastest = min(found, key=lambda c: c.option.duration_s).option
+        vias = _detour_points(found[0].option.points)
+        with ThreadPoolExecutor(max_workers=len(vias)) as pool:
+            results = list(pool.map(lambda via: _safe(lambda: call(via=via)), vias))
+        rejected: list[str] = []
+        for via, options in zip(vias, results, strict=True):
+            if len(found) >= TARGET_ROUTES:
+                break
+            if not options:
+                rejected.append("TomTom found no truck route through a waypoint")
+                continue
+            why = _detour_rejection(options[0], via, found, fastest)
+            if why:
+                rejected.append(why)
+            else:
+                found.append(_Candidate(options[0], "detour", via))
+
+        provider_note = f"TomTom returned {api_count} distinct truck route(s)"
+        if duplicates:
+            verb = "was" if duplicates == 1 else "were"
+            provider_note += f" ({duplicates} more {verb} the same road)"
+        detour_ids = [ROUTE_IDS[i] for i, c in enumerate(found) if c.source == "detour"]
+        if detour_ids:
+            noun = "is a detour" if len(detour_ids) == 1 else "are detours"
+            notices.append(
+                f"{provider_note}. Route {' and '.join(detour_ids)} {noun}: TomTom truck "
+                "routing through a waypoint this app placed beside the main route's midpoint "
+                "(shown on the map). It is a real drivable route, but not one TomTom offered "
+                "as an alternative."
+            )
         if len(found) < TARGET_ROUTES:
-            detours = _detour_points(found[0][0].points)
-            with ThreadPoolExecutor(max_workers=len(detours)) as pool:
-                results = list(pool.map(lambda via: _safe(lambda: call(via=via)), detours))
-            for options in results:
-                for option in options[:1]:
-                    add(option, "detour")
-            detour_ids = [ROUTE_IDS[i] for i, (_, src) in enumerate(found) if src == "detour"]
-            if detour_ids:
-                notices.append(
-                    f"TomTom returned {api_count} distinct truck route(s). "
-                    f"Route {' and '.join(detour_ids)} {'is' if len(detour_ids) == 1 else 'are'} "
-                    "TomTom truck routing through a waypoint beside the main route, offered as a "
-                    "detour option rather than a TomTom alternative."
-                )
-            if len(found) < TARGET_ROUTES:
-                notices.append(
-                    f"Only {len(found)} distinct truck route(s) could be found for this trip."
-                )
+            reasons = "; ".join(dict.fromkeys(rejected)) or "no waypoint routes were possible"
+            notices.append(
+                f"Only {len(found)} meaningful route(s) could be found. {provider_note}, and "
+                f"no waypoint detour qualified: {reasons}."
+            )
         return found, notices, calls
 
     # -- checkpoints ----------------------------------------------------------------------
 
-    def _prepare(self, option: RouteOption, source: str, req: TripRequest) -> _Prepared:
+    def _prepare(self, candidate: _Candidate, req: TripRequest) -> _Prepared:
+        option = candidate.option
         points = option.points
         cum = cumulative_miles(points)
         poly_len = cum[-1]
@@ -269,7 +312,9 @@ class TripPlanner:
                     owned_miles=share,
                 )
             )
-        return _Prepared(option, source, cum, scale, official_mi, checkpoints)
+        return _Prepared(
+            option, candidate.source, candidate.via, cum, scale, official_mi, checkpoints
+        )
 
 
 def _risk_segments(prep: _Prepared) -> list[RiskSegment]:
@@ -302,24 +347,51 @@ def _risk_segments(prep: _Prepared) -> list[RiskSegment]:
     ]
 
 
-def _signature(points: list[LatLon]) -> set[tuple[float, float]]:
-    return {
-        (snap(p.lat, _OVERLAP_CELL_DEG), snap(p.lon, _OVERLAP_CELL_DEG))
-        for p in resample(points, 5)
-    }
+def _detour_rejection(
+    option: RouteOption, via: LatLon, existing: list[_Candidate], fastest: RouteOption
+) -> str | None:
+    """Why a waypoint route is not a meaningful extra option, or None if it is."""
+    distance_ratio = option.length_m / fastest.length_m
+    duration_ratio = option.duration_s / fastest.duration_s
+    if distance_ratio > DETOUR_MAX_DISTANCE_RATIO:
+        return f"a detour would be {distance_ratio:.2f}x the fastest route's distance"
+    if duration_ratio > DETOUR_MAX_DURATION_RATIO:
+        return f"a detour would take {duration_ratio:.2f}x the fastest route's drive time"
+    if any(
+        route_similarity(option.points, c.option.points) > DETOUR_MAX_SIMILARITY for c in existing
+    ):
+        return "a detour would mostly repeat an existing route"
+    if _doubles_back(option.points, via):
+        return "a detour would drive out to the waypoint and back on the same road"
+    return None
 
 
-def _overlap(a: set, b: set) -> float:
-    return len(a & b) / max(1, min(len(a), len(b)))
+def _doubles_back(points: list[LatLon], via: LatLon, *, window_mi: float = 10.0) -> bool:
+    """True if the route reaches the waypoint on a spur: the 10 mi before it and the 10 mi
+    after it are mostly the same road (an out-and-back, not a through route)."""
+    cum = cumulative_miles(points)
+    k = min(range(len(points)), key=lambda i: haversine_mi(points[i], via))
+    at = cum[k]
+    if at < window_mi or cum[-1] - at < window_mi:
+        return False
+    before = slice_polyline(points, cum, at - window_mi, at)
+    after = slice_polyline(points, cum, at, at + window_mi)
+    return shared_fraction(before, after) > 0.5
 
 
 def _detour_points(points: list[LatLon]) -> list[LatLon]:
-    """Two waypoints off either side of the main route's midpoint."""
+    """Two waypoints, one on each side of the main route's midpoint.
+
+    Each sits perpendicular to the origin->destination line, offset by 15 % of the
+    straight-line distance (clamped to 15-100 mi). That nudges TomTom onto a different
+    corridor for the middle of the trip while keeping its ends; TomTom snaps the waypoint to
+    the nearest truck-accessible road.
+    """
     cum = cumulative_miles(points)
     mid = interpolate_along(points, cum, cum[-1] / 2)
     a, b = points[0], points[-1]
     straight = haversine_mi(a, b)
-    offset_mi = min(100.0, max(15.0, 0.15 * straight))
+    offset_mi = min(DETOUR_OFFSET_MAX_MI, max(DETOUR_OFFSET_MIN_MI, DETOUR_OFFSET_SHARE * straight))
 
     cos_lat = math.cos(math.radians(mid.lat))
     dx = (b.lon - a.lon) * cos_lat

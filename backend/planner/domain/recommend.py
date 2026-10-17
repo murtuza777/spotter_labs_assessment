@@ -1,37 +1,56 @@
-"""Ranking routes and explaining the pick.
+"""Choosing the recommended route.
 
-Order (docs/IMPLEMENTATION_PLAN.md section 2.5), lexicographic, lower is better:
-  1. No Travel miles   - not in the brief's list, but No Travel is worse than Severe, so a
-                         route with known No Travel miles must never beat one without.
-  2. Forecast coverage - a fully forecast route ranks ahead of one with unforecast miles.
-                         Unknown miles are not scored, so without this gate a route whose
-                         weather could not be fetched would look as safe as calm weather.
-  3. Severe miles      - from here on, exactly the brief's order
-  4. High miles
-  5. Average risk
-  6. Travel time
-Miles are compared at 0.1 mi and average risk at 0.01 so float noise counts as a tie and the
-next criterion decides. This is how the brief's "balance weather risk and travel time" plays
-out: travel time only breaks ties once the risk is equal, so a shorter route can never beat
-one with fewer Severe miles.
+Ranking is exactly the assessment's order, lexicographic, lower is better:
+  1. Severe miles
+  2. High miles
+  3. Average risk
+  4. Travel time
+Miles are compared at 0.1 mi and average risk at 0.01, so float noise counts as a tie and the
+next criterion decides. Travel time only breaks ties once the risk is equal, so a shorter
+route can never beat one with fewer Severe miles. Full ties keep the provider's order.
+
+Safety is a separate, explicit constraint applied *before* ranking, not an extra criterion:
+  - A route with any No Travel miles is not eligible: it is never recommended.
+  - A route with miles that have no forecast can't be confirmed safe. It is only recommended
+    "provisionally", and only when no fully forecast route without No Travel exists.
+  - If every route has No Travel miles, nothing is recommended.
+Excluded routes are still shown, each with the reason it was excluded.
 """
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import StrEnum
 
 from planner.domain.models import ScoredRoute
 
-# Unknown stretches shorter than this (float noise) don't count against coverage.
+# Unknown stretches shorter than this (float noise) don't count as missing forecast.
 UNKNOWN_TOLERANCE_MI = 0.05
+
+
+class Eligibility(StrEnum):
+    ELIGIBLE = "eligible"
+    INCOMPLETE_FORECAST = "incomplete_forecast"
+    NO_TRAVEL = "no_travel"
+
+
+class Status(StrEnum):
+    RECOMMENDED = "recommended"
+    PROVISIONAL = "provisional"
+    NONE = "none"
+
+
+def eligibility(route: ScoredRoute) -> Eligibility:
+    s = route.summary
+    if s.no_travel_miles > 0:
+        return Eligibility.NO_TRAVEL
+    if s.unknown_miles > UNKNOWN_TOLERANCE_MI:
+        return Eligibility.INCOMPLETE_FORECAST
+    return Eligibility.ELIGIBLE
 
 
 def _hm(seconds: float) -> str:
     hours, minutes = divmod(round(seconds / 60), 60)
     return f"{hours}h {minutes:02d}m"
-
-
-def _has_unknown(route: ScoredRoute) -> bool:
-    return route.summary.unknown_miles > UNKNOWN_TOLERANCE_MI
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,19 +60,8 @@ class _Criterion:
     show: Callable[[ScoredRoute], str]
 
 
-_CRITERIA: tuple[_Criterion, ...] = (
-    _Criterion(
-        "No Travel miles",
-        lambda r: round(r.summary.no_travel_miles, 1),
-        lambda r: f"{r.summary.no_travel_miles:,.1f} mi",
-    ),
-    _Criterion(
-        "forecast coverage",
-        lambda r: 1.0 if _has_unknown(r) else 0.0,
-        lambda r: (
-            f"{r.summary.unknown_miles:,.1f} mi unforecast" if _has_unknown(r) else "complete"
-        ),
-    ),
+# The assessment's ranking, in order. Nothing else is ranked on.
+CRITERIA: tuple[_Criterion, ...] = (
     _Criterion(
         "Severe miles",
         lambda r: round(r.summary.severe_miles, 1),
@@ -74,65 +82,99 @@ _CRITERIA: tuple[_Criterion, ...] = (
 
 
 def sort_key(route: ScoredRoute) -> tuple[float, ...]:
-    return tuple(c.key(route) for c in _CRITERIA)
+    return tuple(c.key(route) for c in CRITERIA)
 
 
 def rank(routes: Sequence[ScoredRoute]) -> list[ScoredRoute]:
-    """Best first. Ties on every criterion keep the routing API's order (deterministic)."""
+    """The assessment's ranking. Best first; full ties keep the input (provider) order."""
     return sorted(routes, key=sort_key)
 
 
 def deciding_criterion(winner: ScoredRoute, other: ScoredRoute) -> str | None:
     """'on Severe miles (0.0 mi vs 18.0 mi)': the first criterion where `winner` beats `other`."""
-    for criterion in _CRITERIA:
-        mine, theirs = criterion.key(winner), criterion.key(other)
-        if mine < theirs:
+    for criterion in CRITERIA:
+        if criterion.key(winner) < criterion.key(other):
             return f"on {criterion.label} ({criterion.show(winner)} vs {criterion.show(other)})"
     return None
 
 
-def explain(ranked: Sequence[ScoredRoute]) -> str:
-    """Why ranked[0] won, against every other route, e.g.
-    'Route B beats Route C on travel time (8h 01m vs 8h 59m) and Route A on average risk
-    (0.00 vs 0.14).'"""
-    if not ranked:
-        return ""
-    best = ranked[0]
-    if len(ranked) == 1:
-        return f"Route {best.id} is the only route available."
-    clauses = []
-    for other in ranked[1:]:
-        reason = deciding_criterion(best, other)
-        clauses.append(
-            f"Route {other.id} {reason}" if reason else f"ties Route {other.id} on every criterion"
+@dataclass(frozen=True, slots=True)
+class Exclusion:
+    route_id: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class Recommendation:
+    status: Status
+    route_id: str | None
+    # Display order: eligible routes (ranked), then incomplete-forecast, then No Travel.
+    order: list[ScoredRoute]
+    reason: str
+    exclusions: list[Exclusion] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
+def recommend(routes: Sequence[ScoredRoute]) -> Recommendation:
+    groups = {e: rank([r for r in routes if eligibility(r) == e]) for e in Eligibility}
+    order = (
+        groups[Eligibility.ELIGIBLE]
+        + groups[Eligibility.INCOMPLETE_FORECAST]
+        + groups[Eligibility.NO_TRAVEL]
+    )
+    if groups[Eligibility.ELIGIBLE]:
+        status, pool = Status.RECOMMENDED, groups[Eligibility.ELIGIBLE]
+    elif groups[Eligibility.INCOMPLETE_FORECAST]:
+        status, pool = Status.PROVISIONAL, groups[Eligibility.INCOMPLETE_FORECAST]
+    else:
+        status, pool = Status.NONE, []
+
+    best = pool[0] if pool else None
+    in_pool = {id(r) for r in pool}
+    exclusions = [_exclusion(r) for r in order if id(r) not in in_pool]
+    warnings: list[str] = []
+    if status is Status.NONE:
+        reason = "No route is recommended: every route has No Travel conditions."
+        warnings.append(
+            "Every route has No Travel conditions at this departure time. "
+            "Consider delaying the trip."
         )
+    else:
+        reason = _explain(best, pool)
+    if status is Status.PROVISIONAL:
+        warnings.append(
+            f"No route has a complete forecast. Route {best.id} is a provisional pick based on "
+            f"the forecast miles only; {best.summary.unknown_miles:,.1f} mi have no forecast, "
+            "so check conditions there before driving."
+        )
+    return Recommendation(
+        status=status,
+        route_id=best.id if best else None,
+        order=order,
+        reason=reason,
+        exclusions=exclusions,
+        warnings=warnings,
+    )
+
+
+def _explain(best: ScoredRoute, pool: Sequence[ScoredRoute]) -> str:
+    others = [r for r in pool if r is not best]
+    if not others:
+        return f"Route {best.id} is the only eligible route."
+    clauses = []
+    for other in others:
+        why = deciding_criterion(best, other)
+        clauses.append(f"Route {other.id} {why}" if why else f"ties Route {other.id}")
     joined = clauses[0] if len(clauses) == 1 else ", ".join(clauses[:-1]) + " and " + clauses[-1]
-    if all(deciding_criterion(best, o) is None for o in ranked[1:]):
-        return f"Route {best.id} {joined}; keeping the routing API's first choice."
+    if all(deciding_criterion(best, o) is None for o in others):
+        return f"Route {best.id} {joined} on every criterion; keeping the routing provider's order."
     return f"Route {best.id} beats {joined}."
 
 
-def warnings(ranked: Sequence[ScoredRoute]) -> list[str]:
-    """Safety caveats about the recommendation. `ranked[0]` is the recommended route."""
-    if not ranked:
-        return []
-    best = ranked[0]
-    out: list[str] = []
-    if best.summary.no_travel_miles > 0:
-        # No Travel is ranked first, so this means every route has No Travel conditions.
-        out.append(
-            f"Every route has No Travel conditions at this departure time. Route {best.id} is "
-            f"only the least risky option ({best.summary.no_travel_miles:,.1f} mi of No Travel). "
-            "Consider delaying the trip."
-        )
-    if _has_unknown(best):
-        out.append(
-            f"No forecast was available for {best.summary.unknown_miles:,.1f} mi of Route "
-            f"{best.id}; those miles are unscored, so check conditions there before driving."
-        )
-    elif any(_has_unknown(r) for r in ranked[1:]):
-        out.append(
-            "Some miles on other routes had no forecast; those routes were ranked after fully "
-            "forecast ones."
-        )
-    return out
+def _exclusion(route: ScoredRoute) -> Exclusion:
+    s = route.summary
+    if eligibility(route) is Eligibility.NO_TRAVEL:
+        why = f"No Travel conditions on {s.no_travel_miles:,.1f} mi (safety constraint)"
+    else:
+        why = f"no forecast for {s.unknown_miles:,.1f} mi, so it can't be confirmed safe"
+    return Exclusion(route.id, f"Route {route.id} is not eligible: {why}.")

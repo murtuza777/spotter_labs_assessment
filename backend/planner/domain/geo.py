@@ -67,6 +67,47 @@ def resample(points: Sequence[LatLon], step_mi: float) -> list[LatLon]:
     return [interpolate_along(points, cum, total * i / count) for i in range(count + 1)]
 
 
+def shared_fraction(
+    a: Sequence[LatLon], b: Sequence[LatLon], *, tolerance_mi: float = 0.3, step_mi: float = 0.5
+) -> float:
+    """Fraction of route `a`'s length that runs within `tolerance_mi` of route `b`.
+
+    Both routes are resampled at fixed spacing (b twice as densely), so the result measures
+    road shared, independent of how many vertices the provider returned or where samples
+    land. Points of b are bucketed on a ~0.7 mi grid, so each lookup checks only neighbours.
+    """
+    if len(a) < 2 or len(b) < 2:
+        return 0.0
+    pa = resample(a, step_mi)
+    pb = resample(b, step_mi / 2)
+    cell = 0.01
+    buckets: dict[tuple[int, int], list[LatLon]] = {}
+    for p in pb:
+        buckets.setdefault((math.floor(p.lat / cell), math.floor(p.lon / cell)), []).append(p)
+    reach_lat = math.ceil(tolerance_mi / (69.0 * cell)) + 1
+
+    def near(p: LatLon) -> bool:
+        reach_lon = math.ceil(reach_lat / max(math.cos(math.radians(p.lat)), 0.2))
+        i, j = math.floor(p.lat / cell), math.floor(p.lon / cell)
+        return any(
+            haversine_mi(p, q) <= tolerance_mi
+            for di in range(-reach_lat, reach_lat + 1)
+            for dj in range(-reach_lon, reach_lon + 1)
+            for q in buckets.get((i + di, j + dj), ())
+        )
+
+    return sum(1 for p in pa if near(p)) / len(pa)
+
+
+def route_similarity(a: Sequence[LatLon], b: Sequence[LatLon]) -> float:
+    """How much two routes are the same road: the smaller of the two shared fractions.
+
+    Symmetric and strict: a 100 mi route fully contained in a 150 mi route scores ~0.67,
+    because the longer route has 50 mi of road the shorter one doesn't.
+    """
+    return min(shared_fraction(a, b), shared_fraction(b, a))
+
+
 def simplify(points: Sequence[LatLon], tolerance_m: float) -> list[LatLon]:
     """Douglas-Peucker simplification on a local equirectangular projection."""
     if len(points) < 3:

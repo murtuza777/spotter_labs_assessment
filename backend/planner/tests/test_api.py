@@ -204,3 +204,25 @@ def test_unexpected_exception_is_a_generic_500(monkeypatch) -> None:
     assert res.status_code == 500
     assert "internal detail" not in res.content.decode()
     assert res.json()["error"]["code"] == "server_error"
+
+
+def test_plan_exposes_ranking_eligibility_and_risk_factors(api) -> None:
+    data = api.post("/api/plan/", _body(), content_type="application/json").json()
+    rec = data["recommendation"]
+    assert rec["status"] == "recommended"
+    assert rec["route_id"] == data["recommended_route_id"]
+    assert rec["ranking"] == ["Severe miles", "High miles", "average risk", "travel time"]
+    assert rec["exclusions"] == []
+    for route in data["routes"]:
+        assert route["eligibility"] == "eligible"
+        assert route["waypoint"] is None
+        assert route["summary"]["forecast_coverage"] == 1.0
+        levels = route["summary"]["miles_by_level"]
+        total = sum(levels.values()) + route["summary"]["unknown_miles"]
+        assert abs(total - route["distance_mi"]) < 0.5  # every mile is accounted for once
+    cp = data["routes"][0]["checkpoints"][2]
+    assert cp["weather_cell"] == {"lat": round(cp["lat"] * 4) / 4, "lon": round(cp["lon"] * 4) / 4}
+    factors = {f["name"]: f for f in cp["risk"]["factors"]}
+    assert factors["wind"]["label"] == "gusts" and factors["wind"]["value"] == 12.0
+    assert factors["wind"]["level"] == "low" and factors["wind"]["load_rule"] is None
+    assert set(factors) == {"wind", "rain", "snow"}
