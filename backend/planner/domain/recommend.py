@@ -23,11 +23,11 @@ class _Criterion:
     label: str
     unit: str
 
-    def describe(self, value: float) -> str:
+    def value(self, value: float) -> str:
         if self.unit == "mi":
-            return f"{value:,.1f} {self.label}"
+            return f"{value:,.1f} mi"
         if self.unit == "score":
-            return f"average risk {value:.2f}"
+            return f"{value:.2f}"
         hours, minutes = divmod(round(value / 60), 60)
         return f"{hours}h {minutes:02d}m"
 
@@ -57,21 +57,33 @@ def rank(routes: Sequence[ScoredRoute]) -> list[ScoredRoute]:
     return sorted(routes, key=sort_key)
 
 
+def deciding_criterion(winner: ScoredRoute, other: ScoredRoute) -> str | None:
+    """'on Severe miles (0.0 vs 18.0)': the first criterion where `winner` beats `other`."""
+    for criterion, mine, theirs in zip(_CRITERIA, sort_key(winner), sort_key(other), strict=True):
+        if mine < theirs:
+            return f"on {criterion.label} ({criterion.value(mine)} vs {criterion.value(theirs)})"
+    return None
+
+
 def explain(ranked: Sequence[ScoredRoute]) -> str:
-    """Why ranked[0] won: the first criterion where it beats the runner-up."""
+    """Why ranked[0] won, against every other route, e.g.
+    'Route B beats Route C on travel time (8h 01m vs 8h 59m) and Route A on average risk
+    (0.00 vs 0.14).'"""
     if not ranked:
         return ""
     best = ranked[0]
     if len(ranked) == 1:
         return f"Route {best.id} is the only route available."
-    runner = ranked[1]
-    for criterion, mine, theirs in zip(_CRITERIA, sort_key(best), sort_key(runner), strict=True):
-        if mine < theirs:
-            return (
-                f"Route {best.id}: {criterion.describe(mine)} vs "
-                f"{criterion.describe(theirs)} on Route {runner.id}"
-            )
-    return f"Routes {best.id} and {runner.id} tie on every criterion; keeping Route {best.id}."
+    clauses = []
+    for other in ranked[1:]:
+        reason = deciding_criterion(best, other)
+        clauses.append(
+            f"Route {other.id} {reason}" if reason else f"ties Route {other.id} on every criterion"
+        )
+    joined = clauses[0] if len(clauses) == 1 else ", ".join(clauses[:-1]) + " and " + clauses[-1]
+    if all(deciding_criterion(best, o) is None for o in ranked[1:]):
+        return f"Route {best.id} {joined}; keeping the routing API's first choice."
+    return f"Route {best.id} beats {joined}."
 
 
 def warnings(routes: Sequence[ScoredRoute]) -> list[str]:
