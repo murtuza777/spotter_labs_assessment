@@ -1,3 +1,4 @@
+import hashlib
 import logging
 
 from django.core.cache import cache
@@ -38,7 +39,7 @@ def geocode(request: Request) -> Response:
     query = GeocodeQuerySerializer(data=request.query_params)
     query.is_valid(raise_exception=True)
     q = query.validated_data["q"].strip()
-    key = f"geo:{q.lower()}"
+    key = "geo:" + hashlib.sha1(" ".join(q.lower().split()).encode()).hexdigest()
     results = cache.get(key)
     if results is None:
         places = deps.geocoder().search(q)

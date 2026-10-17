@@ -25,6 +25,9 @@ services:
         value: https://murtuza-truck-routing.onrender.com
       - key: CACHE_URL
         value: filecache:///tmp/planner-cache
+      # Photon refuses connections from Render's network; TomTom Search answers first.
+      - key: GEOCODER_ORDER
+        value: tomtom,photon
       - key: WEB_CONCURRENCY
         value: "2"
 

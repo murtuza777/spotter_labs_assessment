@@ -84,6 +84,9 @@ SILENCED_SYSTEM_CHECKS = [
 TOMTOM_API_KEY = env("TOMTOM_API_KEY", default="")
 OPEN_METEO_BASE_URL = env("OPEN_METEO_BASE_URL", default="https://api.open-meteo.com/v1/forecast")
 PHOTON_BASE_URL = env("PHOTON_BASE_URL", default="https://photon.komoot.io/api")
+# Geocoders tried in order. Photon is keyless but refuses connections from Render's network,
+# so production lists TomTom Search first (see render.yaml).
+GEOCODER_ORDER = env.list("GEOCODER_ORDER", default=["photon", "tomtom"])
 HTTP_TIMEOUT_SECONDS = env.float("HTTP_TIMEOUT_SECONDS", default=30.0)
 
 # Weather sampling (see docs/IMPLEMENTATION_PLAN.md section 3)

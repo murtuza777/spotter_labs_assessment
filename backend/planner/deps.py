@@ -7,9 +7,11 @@ import httpx
 from django.conf import settings
 from django.core.cache import cache as django_cache
 
+from planner.providers.fallback import FallbackGeocoder
 from planner.providers.openmeteo import OpenMeteoWeather
 from planner.providers.photon import PhotonGeocoder
 from planner.providers.tomtom import TomTomRouting
+from planner.providers.tomtom_search import TomTomGeocoder
 from planner.services.heatmap import HeatmapBuilder
 from planner.services.plan_trip import TripPlanner
 from planner.services.weather import WeatherService
@@ -56,5 +58,9 @@ def heatmap_builder() -> HeatmapBuilder:
 
 
 @cache
-def geocoder() -> PhotonGeocoder:
-    return PhotonGeocoder(http_client(), base_url=settings.PHOTON_BASE_URL)
+def geocoder() -> FallbackGeocoder:
+    available = {
+        "photon": lambda: PhotonGeocoder(http_client(), base_url=settings.PHOTON_BASE_URL),
+        "tomtom": lambda: TomTomGeocoder(settings.TOMTOM_API_KEY, http_client()),
+    }
+    return FallbackGeocoder([(name, available[name]()) for name in settings.GEOCODER_ORDER])
