@@ -1,5 +1,8 @@
 # Implementation Plan — Weather-Aware Truck Routing
 
+> **Status, 2026-10-17:** Phases 0–8, 10 and 11 (docs) are built, tested and pushed. Phase 9's deploy configs are ready, and the deploy itself waits on the Render and Vercel accounts. The Loom is still to record. The time log is in [PROGRESS.md](PROGRESS.md).
+> Changes from the original plan: Open-Meteo uses `gfs_seamless` on its 0.25° grid (§3). The heatmap is 49 layers whose opacity cross-fades, rather than one layer whose weight is re-evaluated (§4.5). The frontend calls the API directly with CORS instead of through a Vercel rewrite, which avoids the proxy's timeout on cold plans.
+
 Spotter AI · Full Stack Developer assessment · started 2026-10-17
 **Budget:** at most 16 work hours over at most 4 days.
 **Deliverables:** GitHub repo, hosted app, 5–10 min Loom walkthrough.
