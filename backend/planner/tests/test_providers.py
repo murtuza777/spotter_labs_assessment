@@ -338,3 +338,27 @@ def test_tomtom_error_message_never_echoes_the_key() -> None:
             DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
         )
     assert "SECRET123" not in err.value.message
+
+
+@respx.mock
+def test_open_meteo_failure_reason_is_reported() -> None:
+    respx.get(OM_URL).mock(
+        return_value=httpx.Response(
+            429, json={"error": True, "reason": "Daily API request limit exceeded"}
+        )
+    )
+    weather = OpenMeteoWeather(httpx.Client(), base_url=OM_URL, retries=1, backoff_s=0)
+    start = datetime(2026, 10, 18, tzinfo=UTC)
+    out = weather.hourly([LatLon(1, 1)], start, start)
+    assert dict(out) == {}
+    assert out.errors == ["HTTP 429: Daily API request limit exceeded"]
+
+
+@respx.mock
+def test_open_meteo_non_retryable_reason_is_reported() -> None:
+    respx.get(OM_URL).mock(
+        return_value=httpx.Response(400, json={"error": True, "reason": "Bad parameter"})
+    )
+    weather = OpenMeteoWeather(httpx.Client(), base_url=OM_URL, backoff_s=0)
+    start = datetime(2026, 10, 18, tzinfo=UTC)
+    assert weather.hourly([LatLon(1, 1)], start, start).errors == ["HTTP 400: Bad parameter"]

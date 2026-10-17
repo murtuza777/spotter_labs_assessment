@@ -294,3 +294,16 @@ test.describe('phone layout', () => {
     expect(overflow).toBeLessThanOrEqual(0)
   })
 })
+
+test('a weather outage gives no recommendation instead of a guess', async ({ page }) => {
+  await mockApi(page, { scenario: 'weather_outage' })
+  await page.goto('/')
+  await planTrip(page)
+  await expect(page.getByText('⚠ Weather unavailable: no route can be assessed')).toBeVisible()
+  await expect(page.getByText(/No route is recommended: weather forecasts were unavailable/)).toBeVisible()
+  await expect(page.getByText(/Weather was unavailable for \d+ of \d+ forecast grid cells/)).toBeVisible()
+  await expect(page.getByText('★ Recommended')).toHaveCount(0)
+  await expect(page.getByText('Provisional pick', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Not eligible: missing forecast', { exact: true })).toHaveCount(3)
+  await expect(routeCards(page).first()).toContainText('0%')
+})

@@ -83,8 +83,9 @@ class PlannedRoute:
 class TripPlan:
     request: TripRequest
     routes: list[PlannedRoute]
-    recommended_id: str | None  # None when every route has No Travel conditions
+    recommended_id: str | None  # None when no route qualifies (see none_reason)
     status: Status
+    none_reason: str | None
     reason: str
     exclusions: list[Exclusion]
     warnings: list[str]
@@ -157,6 +158,13 @@ class TripPlanner:
                 )
             )
 
+        if weather_stats.failed:
+            why = "; ".join(weather_stats.errors) or "no data returned"
+            notices.append(
+                f"Weather was unavailable for {weather_stats.failed} of {weather_stats.cells} "
+                f"forecast grid cells (Open-Meteo: {why}). Those miles are shown as "
+                '"No forecast" and are not scored.'
+            )
         rec = recommend([r.scored for r in routes])
         order = {s.id: i + 1 for i, s in enumerate(rec.order)}
         for r in routes:
@@ -184,6 +192,7 @@ class TripPlanner:
             routes=routes,
             recommended_id=rec.route_id,
             status=rec.status,
+            none_reason=rec.none_reason,
             reason=rec.reason,
             exclusions=rec.exclusions,
             warnings=rec.warnings,

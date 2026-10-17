@@ -20,6 +20,7 @@
  "recommendation": {
   "status": "none",
   "route_id": null,
+  "none_reason": "no_travel",
   "reason": "No route is recommended: every route has No Travel conditions.",
   "exclusions": [
    {
@@ -3770,15 +3771,16 @@
  "notices": [],
  "meta": {
   "routing_lookups": 1,
-  "routing_ms": 47,
+  "routing_ms": 65,
   "checkpoints": 67,
   "weather": {
    "cells": 59,
    "cached": 0,
    "fetched": 59,
    "failed": 0,
-   "ms": 4
+   "ms": 4,
+   "errors": []
   },
-  "total_ms": 60
+  "total_ms": 81
  }
 }

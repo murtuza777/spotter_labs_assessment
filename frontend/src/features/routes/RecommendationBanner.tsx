@@ -14,7 +14,9 @@ export function RecommendationBanner({ plan }: { plan: TripPlan }) {
       ? `Recommended: Route ${rec.route_id}`
       : rec.status === 'provisional'
         ? `Provisional pick: Route ${rec.route_id}`
-        : '⚠ No safe route at this departure time'
+        : rec.none_reason === 'no_forecast'
+          ? '⚠ Weather unavailable: no route can be assessed'
+          : '⚠ No safe route at this departure time'
 
   return (
     <div className="space-y-2">

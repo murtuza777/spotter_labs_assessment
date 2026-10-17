@@ -302,3 +302,24 @@ def test_checkpoints_report_the_queried_cell_and_risk_factors(tomtom_routes, dep
     names = [f.name for f in cp.risk.factors]
     assert names == ["wind", "rain", "snow"]
     assert cp.risk.level == max(f.level for f in cp.risk.factors)
+
+
+def test_weather_outage_gives_no_recommendation_and_says_why(tomtom_routes, departure) -> None:
+    from planner.providers.openmeteo import WeatherFetch
+
+    class Refusing:
+        def hourly(self, cells, start, end):
+            out = WeatherFetch()
+            out.errors.append("HTTP 429: Minutely API request limit exceeded")
+            return out
+
+    plan = TripPlanner(FakeRouting(tomtom_routes), _service(Refusing()), tare_lb=0).plan(
+        _request(departure)
+    )
+    assert plan.status.value == "none" and plan.recommended_id is None
+    assert plan.none_reason == "no_forecast"
+    assert all(r.eligibility == "insufficient_forecast" for r in plan.routes)
+    [notice] = plan.notices
+    assert "Weather was unavailable for" in notice
+    assert "Open-Meteo: HTTP 429: Minutely API request limit exceeded" in notice
+    assert plan.meta["weather"]["errors"] == ["HTTP 429: Minutely API request limit exceeded"]

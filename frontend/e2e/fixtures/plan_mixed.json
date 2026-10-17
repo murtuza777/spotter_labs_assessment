@@ -20,6 +20,7 @@
  "recommendation": {
   "status": "recommended",
   "route_id": "B",
+  "none_reason": null,
   "reason": "Route B beats Route C on travel time (8h 01m vs 8h 58m).",
   "exclusions": [
    {
@@ -3670,15 +3671,16 @@
  "notices": [],
  "meta": {
   "routing_lookups": 1,
-  "routing_ms": 47,
+  "routing_ms": 55,
   "checkpoints": 67,
   "weather": {
    "cells": 59,
    "cached": 0,
    "fetched": 59,
    "failed": 0,
-   "ms": 4
+   "ms": 5,
+   "errors": []
   },
-  "total_ms": 61
+  "total_ms": 69
  }
 }

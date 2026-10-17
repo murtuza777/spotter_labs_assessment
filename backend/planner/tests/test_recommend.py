@@ -179,3 +179,31 @@ def test_eligible_routes_are_listed_first() -> None:
 def test_single_route() -> None:
     rec = recommend([_route("A")])
     assert rec.route_id == "A" and rec.reason == "Route A is the only eligible route."
+
+
+def test_too_little_forecast_is_not_even_a_provisional_pick() -> None:
+    # Regression (production, 2026-10-18): with Open-Meteo refusing every request, all routes
+    # had 0 % coverage and the fastest one was still offered as a "provisional pick".
+    rec = recommend([_route("A", unknown=900, hours=4), _route("B", unknown=900, hours=5)])
+    assert rec.status is Status.NONE and rec.route_id is None
+    assert rec.none_reason == "no_forecast"
+    assert "weather forecasts were unavailable" in rec.reason
+    assert all("too little to assess" in e.reason for e in rec.exclusions)
+    assert eligibility(rec.order[0]) == Eligibility.INSUFFICIENT_FORECAST
+
+
+def test_half_forecast_is_enough_for_a_provisional_pick() -> None:
+    # 100 known miles + 100 unknown = exactly 50 % coverage.
+    rec = recommend([_route("A", unknown=100)])
+    assert rec.status is Status.PROVISIONAL and rec.route_id == "A"
+
+
+def test_no_travel_plus_missing_data_reports_missing_data() -> None:
+    rec = recommend([_route("A", nt=3), _route("B", unknown=500)])
+    assert rec.status is Status.NONE and rec.none_reason == "no_forecast"
+    assert [r.id for r in rec.order] == ["B", "A"]
+
+
+def test_all_no_travel_reports_no_travel() -> None:
+    assert recommend([_route("A", nt=3), _route("B", nt=1)]).none_reason == "no_travel"
+    assert recommend([_route("A")]).none_reason is None

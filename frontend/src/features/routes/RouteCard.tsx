@@ -31,7 +31,7 @@ function Badge({ route, pick }: { route: PlannedRoute; pick: Props['pick'] }) {
     return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">Provisional pick</span>
   if (route.eligibility === 'no_travel')
     return <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-900">Not eligible: No Travel</span>
-  if (route.eligibility === 'incomplete_forecast')
+  if (route.eligibility === 'incomplete_forecast' || route.eligibility === 'insufficient_forecast')
     return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">Not eligible: missing forecast</span>
   return null
 }

@@ -20,6 +20,7 @@
  "recommendation": {
   "status": "provisional",
   "route_id": "A",
+  "none_reason": null,
   "reason": "Route A beats Route B on travel time (7h 35m vs 8h 01m) and Route C on travel time (7h 35m vs 8h 58m).",
   "exclusions": [],
   "warnings": [
@@ -3296,18 +3297,21 @@
    ]
   }
  ],
- "notices": [],
+ "notices": [
+  "Weather was unavailable for 5 of 59 forecast grid cells (Open-Meteo: no data returned). Those miles are shown as \"No forecast\" and are not scored."
+ ],
  "meta": {
   "routing_lookups": 1,
-  "routing_ms": 46,
+  "routing_ms": 52,
   "checkpoints": 67,
   "weather": {
    "cells": 59,
    "cached": 0,
    "fetched": 54,
    "failed": 5,
-   "ms": 3
+   "ms": 5,
+   "errors": []
   },
-  "total_ms": 58
+  "total_ms": 68
  }
 }

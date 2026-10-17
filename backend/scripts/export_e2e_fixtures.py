@@ -74,6 +74,7 @@ SCENARIOS = {
     "partial_forecast": (calm, DENVER_REGION, 3, 0),
     "detour": (calm, set(), 2, 2),
     "two_routes": (calm, set(), 2, 0),
+    "weather_outage": (calm, "all", 3, 0),
 }
 
 
@@ -82,7 +83,9 @@ def main() -> None:
     routes = [parse_route(r) for r in load_fixture("tomtom_denver_slc.json")["routes"]]
     for name, (fn, failing, n_api, n_detours) in SCENARIOS.items():
         cache.clear()
-        weather = FakeWeather(fn, fail_cells=set(failing))
+        weather = FakeWeather(fn, fail_cells=set() if failing == "all" else set(failing))
+        if failing == "all":
+            weather.hourly = lambda cells, start, end: {}  # the provider returns nothing
         service = WeatherService(weather, cache, grid_deg=0.25, ttl_s=600, model="e2e")
         detours = [bent(routes[0], 1.2), bent(routes[0], -1.2)][:n_detours]
         planner = TripPlanner(FakeRouting(routes[:n_api], detours=detours), service, tare_lb=35_000)

@@ -12,8 +12,10 @@ route can never beat one with fewer Severe miles. Full ties keep the provider's 
 Safety is a separate, explicit constraint applied *before* ranking, not an extra criterion:
   - A route with any No Travel miles is not eligible: it is never recommended.
   - A route with miles that have no forecast can't be confirmed safe. It is only recommended
-    "provisionally", and only when no fully forecast route without No Travel exists.
-  - If every route has No Travel miles, nothing is recommended.
+    "provisionally", only when no fully forecast route without No Travel exists, and only if
+    at least half its miles have a forecast (below that there is too little data to rank on).
+  - If no route qualifies, nothing is recommended, and the reason says whether that is
+    because of No Travel conditions or because the weather data was unavailable.
 Excluded routes are still shown, each with the reason it was excluded.
 """
 
@@ -25,11 +27,14 @@ from planner.domain.models import ScoredRoute
 
 # Unknown stretches shorter than this (float noise) don't count as missing forecast.
 UNKNOWN_TOLERANCE_MI = 0.05
+# Below this share of forecast miles a route can't even be a provisional pick.
+MIN_PROVISIONAL_COVERAGE = 0.5
 
 
 class Eligibility(StrEnum):
     ELIGIBLE = "eligible"
-    INCOMPLETE_FORECAST = "incomplete_forecast"
+    INCOMPLETE_FORECAST = "incomplete_forecast"  # some miles lack a forecast
+    INSUFFICIENT_FORECAST = "insufficient_forecast"  # under half the miles have one
     NO_TRAVEL = "no_travel"
 
 
@@ -39,11 +44,20 @@ class Status(StrEnum):
     NONE = "none"
 
 
+def forecast_coverage(route: ScoredRoute) -> float:
+    s = route.summary
+    known = sum(s.miles_by_level.values())
+    total = known + s.unknown_miles
+    return known / total if total > 0 else 0.0
+
+
 def eligibility(route: ScoredRoute) -> Eligibility:
     s = route.summary
     if s.no_travel_miles > 0:
         return Eligibility.NO_TRAVEL
     if s.unknown_miles > UNKNOWN_TOLERANCE_MI:
+        if forecast_coverage(route) < MIN_PROVISIONAL_COVERAGE:
+            return Eligibility.INSUFFICIENT_FORECAST
         return Eligibility.INCOMPLETE_FORECAST
     return Eligibility.ELIGIBLE
 
@@ -108,6 +122,8 @@ class Exclusion:
 class Recommendation:
     status: Status
     route_id: str | None
+    # Status NONE only: "no_travel" (every route has it) or "no_forecast" (data unavailable).
+    none_reason: str | None
     # Display order: eligible routes (ranked), then incomplete-forecast, then No Travel.
     order: list[ScoredRoute]
     reason: str
@@ -120,6 +136,7 @@ def recommend(routes: Sequence[ScoredRoute]) -> Recommendation:
     order = (
         groups[Eligibility.ELIGIBLE]
         + groups[Eligibility.INCOMPLETE_FORECAST]
+        + groups[Eligibility.INSUFFICIENT_FORECAST]
         + groups[Eligibility.NO_TRAVEL]
     )
     if groups[Eligibility.ELIGIBLE]:
@@ -133,11 +150,22 @@ def recommend(routes: Sequence[ScoredRoute]) -> Recommendation:
     in_pool = {id(r) for r in pool}
     exclusions = [_exclusion(r) for r in order if id(r) not in in_pool]
     warnings: list[str] = []
-    if status is Status.NONE:
+    none_reason = None
+    if status is Status.NONE and len(groups[Eligibility.NO_TRAVEL]) == len(order):
+        none_reason = "no_travel"
         reason = "No route is recommended: every route has No Travel conditions."
         warnings.append(
             "Every route has No Travel conditions at this departure time. "
             "Consider delaying the trip."
+        )
+    elif status is Status.NONE:
+        none_reason = "no_forecast"
+        reason = (
+            "No route is recommended: weather forecasts were unavailable for most of every "
+            "route that is free of No Travel conditions, so the risk can't be assessed."
+        )
+        warnings.append(
+            "Weather data was unavailable for most of the trip. Try again in a few minutes."
         )
     else:
         reason = _explain(best, pool)
@@ -150,6 +178,7 @@ def recommend(routes: Sequence[ScoredRoute]) -> Recommendation:
     return Recommendation(
         status=status,
         route_id=best.id if best else None,
+        none_reason=none_reason,
         order=order,
         reason=reason,
         exclusions=exclusions,
@@ -175,6 +204,11 @@ def _exclusion(route: ScoredRoute) -> Exclusion:
     s = route.summary
     if eligibility(route) is Eligibility.NO_TRAVEL:
         why = f"No Travel conditions on {s.no_travel_miles:,.1f} mi (safety constraint)"
+    elif eligibility(route) is Eligibility.INSUFFICIENT_FORECAST:
+        why = (
+            f"no forecast for {s.unknown_miles:,.1f} mi ({1 - forecast_coverage(route):.0%} of "
+            "the route), too little to assess"
+        )
     else:
         why = f"no forecast for {s.unknown_miles:,.1f} mi, so it can't be confirmed safe"
     return Exclusion(route.id, f"Route {route.id} is not eligible: {why}.")

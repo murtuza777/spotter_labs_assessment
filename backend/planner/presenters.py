@@ -29,6 +29,8 @@ def plan_json(plan: TripPlan) -> dict:
             # (every route has No Travel conditions; recommended_route_id is null).
             "status": plan.status.value,
             "route_id": plan.recommended_id,
+            # Status "none" only: "no_travel" or "no_forecast".
+            "none_reason": plan.none_reason,
             "reason": plan.reason,
             "exclusions": [{"route_id": e.route_id, "reason": e.reason} for e in plan.exclusions],
             "warnings": plan.warnings,

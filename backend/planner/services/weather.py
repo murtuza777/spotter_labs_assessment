@@ -26,9 +26,13 @@ class WeatherStats:
     fetched: int
     failed: int
     ms: int
+    # Distinct provider failure reasons (e.g. "HTTP 429: Minutely API request limit exceeded").
+    errors: tuple[str, ...] = ()
 
-    def as_dict(self) -> dict[str, int]:
-        return asdict(self)
+    def as_dict(self) -> dict:
+        d = asdict(self)
+        d["errors"] = list(self.errors)
+        return d
 
 
 class WeatherService:
@@ -94,6 +98,7 @@ class WeatherService:
             fetched=len(fetched),
             failed=len(missing) - len(fetched),
             ms=round((time.perf_counter() - t0) * 1000),
+            errors=tuple(dict.fromkeys(getattr(fetched, "errors", []))),
         )
         log.info(
             "weather cells=%d cached=%d fetched=%d failed=%d ms=%d",

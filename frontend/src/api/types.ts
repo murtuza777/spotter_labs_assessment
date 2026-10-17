@@ -72,7 +72,7 @@ export interface RiskSegment {
   geometry: string
 }
 
-export type Eligibility = 'eligible' | 'incomplete_forecast' | 'no_travel'
+export type Eligibility = 'eligible' | 'incomplete_forecast' | 'insufficient_forecast' | 'no_travel'
 
 export interface PlannedRoute {
   id: string
@@ -117,6 +117,8 @@ export interface TripPlan {
   recommendation: {
     status: 'recommended' | 'provisional' | 'none'
     route_id: string | null
+    /** Status "none" only: every route has No Travel, or the weather data was unavailable. */
+    none_reason: 'no_travel' | 'no_forecast' | null
     reason: string
     exclusions: { route_id: string; reason: string }[]
     warnings: string[]

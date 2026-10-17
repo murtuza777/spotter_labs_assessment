@@ -21,6 +21,15 @@ HOURLY_VARS = "wind_speed_10m,wind_gusts_10m,rain,showers,snowfall"
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 
 
+class WeatherFetch(dict):
+    """Series per cell (a plain dict to callers), plus why any batch failed, so the API can
+    tell users "the weather service refused the request" instead of silently showing gaps."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.errors: list[str] = []
+
+
 class OpenMeteoWeather:
     def __init__(
         self,
@@ -47,15 +56,18 @@ class OpenMeteoWeather:
         if not cells:
             return {}
         batches = [cells[i : i + self._batch_size] for i in range(0, len(cells), self._batch_size)]
-        out: dict[LatLon, HourlySeries] = {}
+        out = WeatherFetch()
         with ThreadPoolExecutor(max_workers=self._max_workers) as pool:
-            for result in pool.map(lambda b: self._fetch_batch(b, start, end), batches):
+            for result, error in pool.map(lambda b: self._fetch_batch(b, start, end), batches):
                 out.update(result)
+                if error:
+                    out.errors.append(error)
         return out
 
     def _fetch_batch(
         self, cells: list[LatLon], start: datetime, end: datetime
-    ) -> dict[LatLon, HourlySeries]:
+    ) -> tuple[dict[LatLon, HourlySeries], str | None]:
+        """Series for one batch, and the failure reason if it couldn't be fetched."""
         params = {
             "latitude": ",".join(f"{c.lat:g}" for c in cells),
             "longitude": ",".join(f"{c.lon:g}" for c in cells),
@@ -68,22 +80,43 @@ class OpenMeteoWeather:
             "start_hour": start.astimezone(UTC).strftime("%Y-%m-%dT%H:%M"),
             "end_hour": end.astimezone(UTC).strftime("%Y-%m-%dT%H:%M"),
         }
+        reason = "no response"
         for attempt in range(self._retries + 1):
             try:
                 response = self._client.get(self._base_url, params=params)
             except httpx.HTTPError as exc:
-                log.warning("Open-Meteo batch of %d failed: %s", len(cells), type(exc).__name__)
                 response = None
+                reason = f"request failed ({type(exc).__name__})"
             if response is not None and response.status_code == 200:
-                return parse_response(response.json(), cells)
-            status = response.status_code if response is not None else None
-            if status is not None and status not in RETRY_STATUSES:
-                log.warning("Open-Meteo HTTP %s: %s", status, response.text[:200])
-                return {}
+                try:
+                    return parse_response(response.json(), cells), None
+                except ValueError:
+                    return {}, "Open-Meteo returned a non-JSON response"
+            if response is not None:
+                reason = f"HTTP {response.status_code}: {_reason(response)}"
+                if response.status_code not in RETRY_STATUSES:
+                    log.warning("Open-Meteo batch of %d failed: %s", len(cells), reason)
+                    return {}, reason
+            log.warning(
+                "Open-Meteo batch of %d attempt %d failed: %s", len(cells), attempt + 1, reason
+            )
             if attempt < self._retries:
                 time.sleep(self._backoff_s * 2**attempt)
-        log.warning("Open-Meteo batch of %d gave up after %d retries", len(cells), self._retries)
-        return {}
+        log.warning(
+            "Open-Meteo batch of %d gave up after %d retries: %s", len(cells), self._retries, reason
+        )
+        return {}, reason
+
+
+def _reason(response: httpx.Response) -> str:
+    """Open-Meteo puts a human-readable cause in {"error": true, "reason": "..."}."""
+    try:
+        body = response.json()
+        if isinstance(body, dict) and body.get("reason"):
+            return str(body["reason"])[:160]
+    except ValueError:
+        pass
+    return response.reason_phrase or "error"
 
 
 def parse_response(data: object, cells: list[LatLon]) -> dict[LatLon, HourlySeries]:
