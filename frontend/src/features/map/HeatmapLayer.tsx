@@ -1,5 +1,5 @@
-import { memo, useMemo } from 'react'
-import { Layer, Source } from 'react-map-gl/maplibre'
+import { memo, useEffect, useMemo, useState } from 'react'
+import { Layer, Source, useMap } from 'react-map-gl/maplibre'
 import type { HeatmapMetric, HeatmapResponse } from '../../api/types'
 import { HEATMAP_COLOR, buildHeatmapGeoJSON, frameOpacities, heatmapGeometry, propertyName } from '../../lib/heatmap'
 import { useTripStore } from '../../store/tripStore'
@@ -25,6 +25,11 @@ export const HeatmapLayer = memo(function HeatmapLayer({ data, beforeId }: { dat
 
   const metric = useTripStore((s) => s.heatmapMetric)
   const hours = data.hours.length
+  const anchorReady = useLayerExists(beforeId)
+
+  // The frames are inserted below the route layers. If the heatmap arrives before those exist
+  // (e.g. a cached heatmap right after a new plan), MapLibre would reject every frame, so wait.
+  if (!anchorReady) return null
 
   return (
     <Source id="heatmap" type="geojson" data={geojson}>
@@ -38,6 +43,10 @@ export const HeatmapLayer = memo(function HeatmapLayer({ data, beforeId }: { dat
           intensity={intensity}
           beforeId={beforeId}
         />
+      ))}
+      {/* After the frames, so the dots sit above the heatmap but below the routes. */}
+      {Array.from({ length: hours }, (_, h) => (
+        <UnknownCellsLayer key={`u${h}`} hour={h} maxHour={hours - 1} metric={metric} beforeId={beforeId} />
       ))}
     </Source>
   )
@@ -73,4 +82,63 @@ function HourLayer({ hour, maxHour, metric, radius, intensity, beforeId }: HourL
       }}
     />
   )
+}
+
+/**
+ * Grey dots where this hour has no forecast for the selected metric, so missing data is shown
+ * as missing instead of as an untinted (calm-looking) gap. Like the heatmap frames, these are
+ * built once and only their opacity follows the slider (nearest hour).
+ */
+function UnknownCellsLayer({
+  hour,
+  maxHour,
+  metric,
+  beforeId,
+}: {
+  hour: number
+  maxHour: number
+  metric: HeatmapMetric
+  beforeId?: string
+}) {
+  const shown = useTripStore((s) => s.heatmapVisible && Math.round(Math.max(0, Math.min(maxHour, s.hour))) === hour)
+  const opacity = shown ? 0.9 : 0
+  return (
+    <Layer
+      id={`weather-unknown-${hour}`}
+      type="circle"
+      beforeId={beforeId}
+      source="heatmap"
+      filter={['!', ['has', propertyName(metric, hour)]]}
+      paint={{
+        'circle-color': '#94a3b8',
+        'circle-radius': 3.5,
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 1,
+        'circle-opacity': opacity,
+        'circle-stroke-opacity': opacity,
+        'circle-opacity-transition': NO_TRANSITION,
+        'circle-stroke-opacity-transition': NO_TRANSITION,
+      }}
+    />
+  )
+}
+
+/** Whether a style layer exists yet; re-checked on every style change until it does. */
+function useLayerExists(layerId: string | undefined): boolean {
+  const { current: map } = useMap()
+  const [exists, setExists] = useState(() => !layerId || !!map?.getLayer(layerId))
+  useEffect(() => {
+    if (!map || !layerId || exists) return
+    const check = () => {
+      if (map.getLayer(layerId)) setExists(true)
+    }
+    map.on('styledata', check)
+    // The layer may have been added between render and this effect.
+    const id = requestAnimationFrame(check)
+    return () => {
+      map.off('styledata', check)
+      cancelAnimationFrame(id)
+    }
+  }, [map, layerId, exists])
+  return exists
 }

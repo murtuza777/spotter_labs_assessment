@@ -2,6 +2,7 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import { memo, useMemo } from 'react'
 import { Layer, Source } from 'react-map-gl/maplibre'
 import type { TripPlan } from '../../api/types'
+import { defaultRouteId } from '../../lib/routeModel'
 import { useTripStore } from '../../store/tripStore'
 import { LEVEL_COLOR_EXPR, checkpointsGeoJSON, routesGeoJSON, segmentsGeoJSON } from './layers'
 
@@ -15,7 +16,7 @@ export const RouteLayers = memo(function RouteLayers({ plan }: { plan: TripPlan 
   const segments = useMemo(() => segmentsGeoJSON(plan), [plan])
   const checkpoints = useMemo(() => checkpointsGeoJSON(plan), [plan])
 
-  const selected = useTripStore((s) => s.selectedRouteId) ?? plan.recommended_route_id
+  const selected = useTripStore((s) => s.selectedRouteId) ?? defaultRouteId(plan)
   const hovered = useTripStore((s) => s.hoveredRouteId)
 
   const isSelected: ExpressionSpecification = ['==', ['get', 'routeId'], selected]

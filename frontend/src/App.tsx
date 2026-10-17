@@ -8,6 +8,7 @@ import { CheckpointList } from './features/routes/CheckpointList'
 import { RecommendationBanner } from './features/routes/RecommendationBanner'
 import { RouteCard } from './features/routes/RouteCard'
 import { ForecastSlider } from './features/timeline/ForecastSlider'
+import { defaultRouteId } from './lib/routeModel'
 import { useTripStore } from './store/tripStore'
 
 // MapLibre is ~1 MB; load it in its own chunk so the form is interactive immediately.
@@ -24,14 +25,14 @@ function App() {
   const resetForPlan = useTripStore((s) => s.resetForPlan)
 
   useEffect(() => {
-    if (plan) resetForPlan(plan.recommended_route_id)
+    if (plan) resetForPlan(defaultRouteId(plan))
   }, [plan, resetForPlan])
 
   const onSubmit = useCallback((req: PlanRequest) => planMutation.mutate(req), [planMutation])
 
   const error = planMutation.error
   const apiError = error instanceof ApiError ? error : null
-  const selected = plan?.routes.find((r) => r.id === (selectedRouteId ?? plan.recommended_route_id))
+  const selected = plan?.routes.find((r) => r.id === (selectedRouteId ?? defaultRouteId(plan)))
   const orderedRoutes = plan ? [...plan.routes].sort((a, b) => a.rank - b.rank) : []
 
   return (
@@ -68,7 +69,13 @@ function App() {
                   <RouteCard
                     key={route.id}
                     route={route}
-                    recommended={route.id === plan.recommended_route_id}
+                    pick={
+                      route.id === plan.recommended_route_id
+                        ? plan.recommendation.status === 'provisional'
+                          ? 'provisional'
+                          : 'recommended'
+                        : null
+                    }
                     selected={route.id === selected?.id}
                     onSelect={selectRoute}
                     onHover={hoverRoute}

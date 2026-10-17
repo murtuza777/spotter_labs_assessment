@@ -1,33 +1,44 @@
 import type { TripPlan } from '../../api/types'
 
+const TONE = {
+  recommended: { box: 'border-emerald-200 bg-emerald-50', title: 'text-emerald-900', body: 'text-emerald-800' },
+  provisional: { box: 'border-amber-300 bg-amber-50', title: 'text-amber-900', body: 'text-amber-800' },
+  none: { box: 'border-purple-300 bg-purple-50', title: 'text-purple-900', body: 'text-purple-800' },
+} as const
+
 export function RecommendationBanner({ plan }: { plan: TripPlan }) {
-  const { recommendation, notices } = plan
-  const best = plan.routes.find((r) => r.id === plan.recommended_route_id)
-  // No Travel miles rank first, so the recommended route having any means every route does.
-  const noSafeRoute = (best?.summary.miles_by_level.no_travel ?? 0) > 0
+  const { recommendation: rec, notices } = plan
+  const tone = TONE[rec.status]
+  const title =
+    rec.status === 'recommended'
+      ? `Recommended: Route ${rec.route_id}`
+      : rec.status === 'provisional'
+        ? `Provisional pick: Route ${rec.route_id}`
+        : '⚠ No safe route at this departure time'
+
   return (
     <div className="space-y-2">
-      <div
-        className={`rounded-lg border p-3 ${
-          noSafeRoute ? 'border-purple-300 bg-purple-50' : 'border-emerald-200 bg-emerald-50'
-        }`}
-        role="status"
-      >
-        <p className={`text-sm font-semibold ${noSafeRoute ? 'text-purple-900' : 'text-emerald-900'}`}>
-          {noSafeRoute
-            ? '⚠ No safe route at this departure time'
-            : `Recommended: Route ${plan.recommended_route_id}`}
-        </p>
-        <p className={`mt-0.5 text-sm ${noSafeRoute ? 'text-purple-800' : 'text-emerald-800'}`}>
-          {noSafeRoute && `Least risky option is Route ${plan.recommended_route_id}. `}
-          {recommendation.reason}
-        </p>
-        <p className="mt-1 text-[11px] text-slate-500">
-          Ranked by No Travel miles, then forecast coverage, then the brief's order: Severe miles,
-          High miles, average risk, drive time.
-        </p>
+      <div className={`rounded-lg border p-3 ${tone.box}`} role="status">
+        <p className={`text-sm font-semibold ${tone.title}`}>{title}</p>
+        <p className={`mt-0.5 text-sm ${tone.body}`}>{rec.reason}</p>
+        {rec.exclusions.length > 0 && (
+          <ul className={`mt-1.5 list-disc space-y-0.5 pl-4 text-xs ${tone.body}`}>
+            {rec.exclusions.map((e) => (
+              <li key={e.route_id}>{e.reason}</li>
+            ))}
+          </ul>
+        )}
+        <details className="mt-1.5 text-[11px] text-slate-600">
+          <summary className="cursor-pointer select-none">How routes are ranked</summary>
+          <p className="mt-1 leading-relaxed">
+            Routes are ranked exactly as the assessment specifies: fewest Severe miles, then fewest
+            High miles, then lowest average risk, then shortest drive time. As a separate safety
+            constraint, a route with any No Travel conditions is never recommended, and a route
+            missing forecasts can only be a provisional pick when no fully forecast route exists.
+          </p>
+        </details>
       </div>
-      {[...recommendation.warnings, ...notices].map((msg) => (
+      {[...rec.warnings, ...notices].map((msg) => (
         <p key={msg} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           {msg}
         </p>

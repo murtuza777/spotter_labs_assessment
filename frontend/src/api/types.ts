@@ -34,12 +34,33 @@ export interface Checkpoint {
   eta: string
   forecast_hour: string
   weather: CheckpointWeather | null
-  risk: { level: RiskLevel; score: number; reasons: string[] } | null
+  /** The forecast grid cell actually queried for this checkpoint. */
+  weather_cell: { lat: number; lon: number } | null
+  risk: {
+    level: RiskLevel
+    score: number
+    reasons: string[]
+    factors: RiskFactor[]
+  } | null
+}
+
+export interface RiskFactor {
+  name: 'wind' | 'rain' | 'snow'
+  label: string
+  value: number
+  unit: string
+  /** Level from the threshold table alone. */
+  base_level: RiskLevel
+  /** Level after the load rules (only wind can differ). */
+  level: RiskLevel
+  load_rule: string | null
 }
 
 export interface RouteSummary {
   miles_by_level: Record<RiskLevel, number>
   unknown_miles: number
+  /** Share of the route's miles with a forecast, 0-1. */
+  forecast_coverage: number
   avg_risk: number
   max_level: RiskLevel | null
 }
@@ -51,10 +72,16 @@ export interface RiskSegment {
   geometry: string
 }
 
+export type Eligibility = 'eligible' | 'incomplete_forecast' | 'no_travel'
+
 export interface PlannedRoute {
   id: string
   source: 'routing_api' | 'detour'
+  /** Display position: eligible routes in assessment order, then the excluded ones. */
   rank: number
+  eligibility: Eligibility
+  /** Detours only: the waypoint TomTom was asked to route through. */
+  waypoint: { lat: number; lon: number } | null
   distance_mi: number
   duration_s: number
   arrival_time: string
@@ -85,8 +112,16 @@ export interface PlanMeta {
 export interface TripPlan {
   generated_at: string
   request: PlanRequest
-  recommended_route_id: string
-  recommendation: { reason: string; warnings: string[] }
+  /** Null when every route has No Travel conditions. */
+  recommended_route_id: string | null
+  recommendation: {
+    status: 'recommended' | 'provisional' | 'none'
+    route_id: string | null
+    reason: string
+    exclusions: { route_id: string; reason: string }[]
+    warnings: string[]
+    ranking: string[]
+  }
   routes: PlannedRoute[]
   notices: string[]
   meta?: PlanMeta

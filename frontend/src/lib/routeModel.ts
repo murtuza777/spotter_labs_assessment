@@ -1,6 +1,11 @@
 import type { Checkpoint, PlannedRoute, TripPlan } from '../api/types'
 import { cumulativeMiles, decodePolyline, interpolateAlong, interpolateSeries, type LngLat } from './geo'
 
+/** The route shown first: the recommended one, else the best-ranked one. */
+export function defaultRouteId(plan: TripPlan): string {
+  return plan.recommended_route_id ?? [...plan.routes].sort((a, b) => a.rank - b.rank)[0].id
+}
+
 /** Everything the map needs per route, decoded once per plan. */
 export interface RouteModel {
   route: PlannedRoute

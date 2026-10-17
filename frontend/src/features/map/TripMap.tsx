@@ -10,6 +10,7 @@ import Map, {
 import type { HeatmapResponse, TripPlan } from '../../api/types'
 import { boundsOf, decodePolyline } from '../../lib/geo'
 import { buildRouteModels, type RouteModel } from '../../lib/routeModel'
+import { defaultRouteId } from '../../lib/routeModel'
 import { useTripStore } from '../../store/tripStore'
 import { CheckpointPopup } from './CheckpointPopup'
 import { HeatmapLayer } from './HeatmapLayer'
@@ -42,7 +43,7 @@ export default function TripMap({ plan, heatmap }: Props) {
   const hoverRoute = useTripStore((s) => s.hoverRoute)
   const focusCheckpoint = useTripStore((s) => s.focusCheckpoint)
   const focused = useTripStore((s) => s.focused)
-  const selectedId = useTripStore((s) => s.selectedRouteId) ?? plan?.recommended_route_id
+  const selectedId = useTripStore((s) => s.selectedRouteId) ?? (plan ? defaultRouteId(plan) : undefined)
 
   const models = useMemo<RouteModel[]>(() => (plan ? buildRouteModels(plan) : []), [plan])
   const selectedModel = models.find((m) => m.route.id === selectedId)
@@ -140,6 +141,18 @@ export default function TripMap({ plan, heatmap }: Props) {
           <EndpointDot label="End" tone="bg-sky-600" />
         </Marker>
       )}
+      {plan?.routes
+        .filter((r) => r.waypoint)
+        .map((r) => (
+          <Marker key={`wp-${r.id}`} longitude={r.waypoint!.lon} latitude={r.waypoint!.lat} anchor="center">
+            <span
+              title={`Route ${r.id} is TomTom truck routing through this waypoint, placed by the app`}
+              className="rounded border border-amber-400 bg-amber-50 px-1 py-0.5 text-[10px] font-semibold text-amber-900 shadow"
+            >
+              Waypoint · {r.id}
+            </span>
+          </Marker>
+        ))}
       {selectedModel && <TruckMarker model={selectedModel} />}
 
       {popupRoute && popupCheckpoint && plan && (

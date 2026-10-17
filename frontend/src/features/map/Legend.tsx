@@ -33,7 +33,7 @@ export function Legend() {
       </ul>
       <p className="mt-1 hidden max-w-44 text-[10px] leading-snug text-slate-500 sm:block">
         Route and checkpoints: forecast at the truck's ETA. Heatmap: forecast at the slider time;
-        untinted means no forecast data.
+        grey dots mark grid cells with no forecast for that hour.
       </p>
     </div>
   )

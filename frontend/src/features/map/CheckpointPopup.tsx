@@ -40,31 +40,55 @@ export function CheckpointPopup({ route, checkpoint: cp, loadLb, windMetric, onC
         <p>
           <span className="text-slate-500">ETA</span> {formatDateTime(cp.eta)}
         </p>
-        {w ? (
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            <dt className="text-slate-500">Gusts{windMetric === 'gust' && ' (rule)'}</dt>
-            <dd className="text-right tabular-nums">{w.gust_mph.toFixed(0)} mph</dd>
-            <dt className="text-slate-500">Sustained{windMetric === 'sustained' && ' (rule)'}</dt>
-            <dd className="text-right tabular-nums">{w.wind_mph.toFixed(0)} mph</dd>
-            <dt className="text-slate-500">Rain</dt>
-            <dd className="text-right tabular-nums">{w.rain_in_hr.toFixed(2)} in/hr</dd>
-            <dt className="text-slate-500">Snow</dt>
-            <dd className="text-right tabular-nums">{w.snow_in_hr.toFixed(2)} in/hr</dd>
-          </dl>
+        {w && cp.risk ? (
+          <>
+            <table className="w-full border-collapse text-[11px]">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wide text-slate-400">
+                  <th className="pb-0.5 font-medium">Factor</th>
+                  <th className="pb-0.5 text-right font-medium">Forecast</th>
+                  <th className="pb-0.5 pl-2 text-right font-medium">Level</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cp.risk.factors.map((f) => (
+                  <tr key={f.name} className="border-t border-slate-100">
+                    <td className="py-0.5 capitalize">{f.label}</td>
+                    <td className="py-0.5 text-right tabular-nums">
+                      {f.unit === 'mph' ? f.value.toFixed(0) : f.value.toFixed(2)} {f.unit}
+                    </td>
+                    <td className="py-0.5 pl-2 text-right font-semibold" style={{ color: riskColor(f.level) }}>
+                      {f.level !== f.base_level && (
+                        <span className="font-normal text-slate-400">{riskLabel(f.base_level)} → </span>
+                      )}
+                      {riskLabel(f.level)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {cp.risk.factors
+              .filter((f) => f.load_rule)
+              .map((f) => (
+                <p key={f.name} className="rounded bg-purple-50 px-1.5 py-1 text-[11px] text-purple-900">
+                  Load rule: {f.load_rule}
+                </p>
+              ))}
+            <p className="text-[11px] text-slate-600">
+              Checkpoint risk is the worst factor: <b style={{ color: riskColor(level) }}>{riskLabel(level)}</b>.{' '}
+              {windMetric === 'gust'
+                ? `Wind uses gusts (sustained wind was ${w.wind_mph.toFixed(0)} mph).`
+                : `Wind uses sustained speed (gusts were ${w.gust_mph.toFixed(0)} mph).`}
+            </p>
+          </>
         ) : (
           <p className="text-slate-500">
             No forecast for this place and hour, so this stretch is unscored (not assumed safe).
           </p>
         )}
-        {cp.risk && cp.risk.reasons.length > 0 && (
-          <ul className="list-disc space-y-0.5 border-t border-slate-100 pl-4 pt-1.5">
-            {cp.risk.reasons.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-        )}
         <p className="text-[10px] text-slate-400">
-          Forecast at the truck's ETA (hour ending {formatDateTime(cp.forecast_hour)}) · load{' '}
+          Forecast at the truck's ETA: the hour ending {formatDateTime(cp.forecast_hour)} ({cp.forecast_hour.slice(11, 16)} UTC), grid cell{' '}
+          {cp.weather_cell ? `${cp.weather_cell.lat.toFixed(2)}, ${cp.weather_cell.lon.toFixed(2)}` : 'n/a'} · load{' '}
           {loadLb.toLocaleString()} lb
         </p>
       </div>
