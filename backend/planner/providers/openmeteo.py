@@ -5,6 +5,7 @@ Gusts, rain, showers and snowfall are "preceding hour" values (see domain/timebu
 """
 
 import logging
+import math
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
@@ -85,29 +86,62 @@ class OpenMeteoWeather:
         return {}
 
 
-def parse_response(data: dict | list, cells: list[LatLon]) -> dict[LatLon, HourlySeries]:
-    """Open-Meteo returns one object per requested location, in request order."""
-    locations = data if isinstance(data, list) else [data]
+def parse_response(data: object, cells: list[LatLon]) -> dict[LatLon, HourlySeries]:
+    """Open-Meteo returns one object per requested location, in request order.
+
+    Vendor data is validated rather than trusted: a location whose time axis is missing or
+    not hourly is dropped, and every individual reading that is not a finite, non-negative
+    number becomes None ("unknown"), so it can never be scored as calm or as No Travel.
+    """
+    if isinstance(data, dict):
+        data = [data]
+    if not isinstance(data, list):
+        log.warning("Open-Meteo returned %s instead of a list", type(data).__name__)
+        return {}
     out: dict[LatLon, HourlySeries] = {}
-    for cell, loc in zip(cells, locations, strict=False):
-        hourly = loc.get("hourly") or {}
-        times = hourly.get("time") or []
-        if not times:
+    for cell, loc in zip(cells, data, strict=False):
+        hourly = loc.get("hourly") if isinstance(loc, dict) else None
+        if not isinstance(hourly, dict):
             continue
-        rain = hourly.get("rain") or []
-        showers = hourly.get("showers") or []
+        times = hourly.get("time")
+        if not _is_hourly_axis(times):
+            log.warning("Open-Meteo time axis invalid for %s", cell)
+            continue
+        n = len(times)
+        rain = _readings(hourly.get("rain"), n)
+        showers = _readings(hourly.get("showers"), n)
         out[cell] = HourlySeries(
             start=datetime.fromtimestamp(times[0], tz=UTC),
-            wind_mph=list(hourly.get("wind_speed_10m") or []),
-            gust_mph=list(hourly.get("wind_gusts_10m") or []),
-            # Liquid precipitation only: large-scale rain plus convective showers.
-            rain_in_hr=[_add(r, s) for r, s in zip(rain, showers, strict=False)],
-            snow_in_hr=list(hourly.get("snowfall") or []),
+            wind_mph=_readings(hourly.get("wind_speed_10m"), n),
+            gust_mph=_readings(hourly.get("wind_gusts_10m"), n),
+            # Liquid precipitation only: large-scale rain plus convective showers. If either
+            # part is missing the total is unknown, not "whatever part we have".
+            rain_in_hr=[
+                None if r is None or s is None else r + s
+                for r, s in zip(rain, showers, strict=True)
+            ],
+            snow_in_hr=_readings(hourly.get("snowfall"), n),
         )
     return out
 
 
-def _add(a: float | None, b: float | None) -> float | None:
-    if a is None and b is None:
+def _is_hourly_axis(times: object) -> bool:
+    if not isinstance(times, list) or not times:
+        return False
+    if not all(isinstance(t, int | float) and not isinstance(t, bool) for t in times):
+        return False
+    return all(b - a == 3600 for a, b in zip(times, times[1:], strict=False))
+
+
+def _readings(values: object, n: int) -> list[float | None]:
+    """Exactly `n` readings; anything missing or invalid is None."""
+    raw = values if isinstance(values, list) else []
+    return [_valid(raw[i]) if i < len(raw) else None for i in range(n)]
+
+
+def _valid(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, int | float):
         return None
-    return (a or 0.0) + (b or 0.0)
+    if not math.isfinite(value) or value < 0:
+        return None
+    return float(value)

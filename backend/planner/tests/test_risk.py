@@ -130,3 +130,42 @@ def test_sustained_metric_uses_mean_wind() -> None:
 def test_unknown_wind_metric_rejected() -> None:
     with pytest.raises(ValueError):
         assess(_w(), 0, wind_metric="peak")
+
+
+@pytest.mark.parametrize(
+    "weather",
+    [
+        _w(gust=float("nan")),
+        _w(snow=float("nan")),
+        _w(rain=float("inf")),
+        _w(gust=-1),
+        _w(rain=-0.01),
+        _w(wind=-5),
+    ],
+)
+def test_invalid_readings_are_rejected_not_classified(weather: WeatherSample) -> None:
+    # Regression (audit D2): NaN used to fall through every band to No Travel, and negative
+    # values read as Low.
+    with pytest.raises(ValueError):
+        assess(weather, load_lb=10_000)
+
+
+@pytest.mark.parametrize("load", [-1, float("nan")])
+def test_invalid_load_is_rejected(load: float) -> None:
+    with pytest.raises(ValueError):
+        assess(_w(gust=40), load_lb=load)
+
+
+@pytest.mark.parametrize(
+    ("gust", "rain", "snow", "load", "level"),
+    [
+        (47, 0.0, 0.0, 30_000, L.SEVERE),  # load rule needs > 30,000
+        (47, 1.5, 0.0, 30_000, L.NO_TRAVEL),  # rain decides
+        (40, 0.3, 1.5, 41_000, L.SEVERE),  # wind escalated to Severe beats High rain/snow
+        (10, 0.1, 0.5, 80_000, L.MODERATE),  # load never touches rain/snow
+        (55, 0.0, 0.0, 0, L.NO_TRAVEL),  # >= 55 mph for any load
+        (24.99, 0.0999, 0.499, 79_999, L.LOW),
+    ],
+)
+def test_combinations(gust: float, rain: float, snow: float, load: float, level: L) -> None:
+    assert assess(_w(gust=gust, rain=rain, snow=snow), load).level == level

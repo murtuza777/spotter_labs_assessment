@@ -91,9 +91,54 @@ def test_explain_single_route() -> None:
 
 
 def test_warning_when_every_route_has_no_travel() -> None:
-    assert len(warnings([_route("A", nt=1), _route("B", nt=3)])) == 1
-    assert warnings([_route("A", nt=1), _route("B")]) == []
+    ranked = rank([_route("A", nt=1), _route("B", nt=3)])
+    [msg] = warnings(ranked)
+    assert "Every route has No Travel" in msg and "Route A" in msg
+    assert warnings(rank([_route("A", nt=1), _route("B")])) == []
 
 
-def test_warning_for_unknown_weather() -> None:
-    assert any("unavailable" in w for w in warnings([_route("A", unknown=12)]))
+def test_no_travel_route_never_recommended_over_one_without() -> None:
+    # B is faster, has no Severe or High miles, but crosses one No Travel mile.
+    ranked = rank([_route("A", severe=80, high=40, hours=12), _route("B", nt=1, hours=3)])
+    assert [r.id for r in ranked] == ["A", "B"]
+    assert warnings(ranked) == []
+    assert "No Travel miles" in explain(ranked)
+
+
+def test_unforecast_miles_are_never_treated_as_safe() -> None:
+    # Regression (audit D1): A had 90 unscored miles and used to beat B's 10 Severe miles.
+    ranked = rank([_route("A", unknown=90), _route("B", severe=10)])
+    assert [r.id for r in ranked] == ["B", "A"]
+    assert explain(ranked) == (
+        "Route B beats Route A on forecast coverage (complete vs 90.0 mi unforecast)."
+    )
+    assert "ranked after fully forecast ones" in warnings(ranked)[0]
+
+
+def test_coverage_gate_does_not_override_no_travel() -> None:
+    ranked = rank([_route("A", unknown=20), _route("B", nt=2)])
+    assert [r.id for r in ranked] == ["A", "B"]
+    assert "No forecast was available for 20.0 mi of Route A" in warnings(ranked)[0]
+
+
+def test_two_partially_forecast_routes_fall_back_to_the_brief_order() -> None:
+    ranked = rank([_route("A", unknown=5, severe=10), _route("B", unknown=40, severe=0)])
+    assert [r.id for r in ranked] == ["B", "A"]
+
+
+def test_tiny_unknown_stretch_is_float_noise() -> None:
+    ranked = rank([_route("A", unknown=0.01, hours=4), _route("B", hours=5)])
+    assert [r.id for r in ranked] == ["A", "B"]
+
+
+def test_api_order_does_not_decide_the_winner() -> None:
+    import itertools
+
+    routes = [_route("A", severe=5, hours=4), _route("B", high=9, hours=6), _route("C", high=3)]
+    for order in itertools.permutations(routes):
+        assert [r.id for r in rank(order)] == ["C", "B", "A"]
+
+
+def test_longer_route_with_fewer_severe_miles_wins() -> None:
+    ranked = rank([_route("FAST", severe=0.2, hours=2), _route("SLOW", severe=0.0, hours=20)])
+    assert ranked[0].id == "SLOW"

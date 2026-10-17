@@ -5,6 +5,8 @@ higher level (rain 0.25 in/hr is High). The brief writes the No Travel bands as 
 "> 3.0", so 1.00 in/hr rain and 3.0 in/hr snow are still Severe.
 """
 
+import math
+
 from planner.domain.models import RiskAssessment, RiskLevel, WeatherSample
 
 L = RiskLevel
@@ -63,6 +65,13 @@ def assess(weather: WeatherSample, load_lb: float, wind_metric: str = "gust") ->
     """Checkpoint risk = the worst of the wind (after load rules), rain and snow levels."""
     if wind_metric not in WIND_METRICS:
         raise ValueError(f"wind_metric must be one of {WIND_METRICS}")
+    readings = (weather.wind_mph, weather.gust_mph, weather.rain_in_hr, weather.snow_in_hr)
+    if not all(math.isfinite(v) and v >= 0 for v in readings):
+        # NaN would fall through every band and read as No Travel; negatives would read as
+        # Low. Callers must treat invalid data as unknown instead of classifying it.
+        raise ValueError(f"invalid weather reading: {weather}")
+    if not math.isfinite(load_lb) or load_lb < 0:
+        raise ValueError(f"invalid load weight: {load_lb}")
     wind = weather.gust_mph if wind_metric == "gust" else weather.wind_mph
     wind_name = "Gusts" if wind_metric == "gust" else "Wind"
 

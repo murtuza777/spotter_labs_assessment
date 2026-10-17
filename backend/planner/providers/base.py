@@ -1,5 +1,6 @@
 """Interfaces and DTOs for third-party providers, so services never see vendor JSON."""
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Protocol
@@ -74,14 +75,29 @@ class HourlySeries:
         return self.start <= start and end <= self.end
 
     def at(self, hour: datetime) -> WeatherSample | None:
+        """The reading for `hour`, or None if any value is missing or not a valid reading.
+
+        None means "unknown" and is never scored. Out-of-range hours (outside the forecast
+        coverage that was fetched) are unknown too, never extrapolated.
+        """
         i = int((hour - self.start).total_seconds() // 3600)
-        if i < 0 or i >= len(self.gust_mph):
+        series = (self.wind_mph, self.gust_mph, self.rain_in_hr, self.snow_in_hr)
+        if i < 0 or any(i >= len(s) for s in series):
             return None
-        values = (self.wind_mph[i], self.gust_mph[i], self.rain_in_hr[i], self.snow_in_hr[i])
-        if any(v is None for v in values):
+        values = tuple(s[i] for s in series)
+        if not all(_is_reading(v) for v in values):
             return None
         wind, gust, rain, snow = values
         return WeatherSample(wind_mph=wind, gust_mph=gust, rain_in_hr=rain, snow_in_hr=snow)
+
+
+def _is_reading(value: object) -> bool:
+    return (
+        isinstance(value, int | float)
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
 
 
 class WeatherProvider(Protocol):
