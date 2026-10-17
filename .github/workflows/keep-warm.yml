@@ -1,0 +1,16 @@
+# Render's free tier sleeps after 15 idle minutes; a cold start adds ~30-60 s to the first
+# request. Ping the health endpoint during the review window. Set the repository variable
+# API_HEALTH_URL (e.g. https://truck-weather-api.onrender.com/api/health/) to enable.
+name: Keep API warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    if: ${{ vars.API_HEALTH_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS --max-time 90 "${{ vars.API_HEALTH_URL }}"
