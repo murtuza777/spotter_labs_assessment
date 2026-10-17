@@ -1,15 +1,16 @@
 import { useEffect } from 'react'
-import type { HeatmapMetric } from '../../api/types'
-import { formatDateTime } from '../../lib/format'
+import type { HeatmapMetric, PlannedRoute } from '../../api/types'
+import { formatClock, formatDateTime, formatRiskMiles } from '../../lib/format'
 import { METRICS } from '../../lib/heatmap'
-import { METRIC_LABEL } from '../../lib/risk'
+import { METRIC_LABEL, riskColor, riskLabel } from '../../lib/risk'
+import { truckStatus } from '../../lib/routeModel'
 import { MAX_HOUR, useTripStore } from '../../store/tripStore'
 
 const PLAY_SPEED_H_PER_S = 4
 
 interface Props {
   departure: string
-  arrivalHours: number | null
+  route: PlannedRoute | null
   heatmapState: 'loading' | 'ready' | 'error'
   onRetry: () => void
 }
@@ -38,7 +39,7 @@ function usePlayback() {
   }, [isPlaying])
 }
 
-export function ForecastSlider({ departure, arrivalHours, heatmapState, onRetry }: Props) {
+export function ForecastSlider({ departure, route, heatmapState, onRetry }: Props) {
   usePlayback()
   const hour = useTripStore((s) => s.hour)
   const isPlaying = useTripStore((s) => s.isPlaying)
@@ -47,7 +48,9 @@ export function ForecastSlider({ departure, arrivalHours, heatmapState, onRetry 
   const { setHour, setPlaying, setHeatmapMetric, toggleHeatmap } = useTripStore.getState()
 
   const at = new Date(Date.parse(departure) + hour * 3_600_000)
+  const arrivalHours = route ? route.duration_s / 3600 : null
   const arrivalPct = arrivalHours !== null && arrivalHours <= MAX_HOUR ? (arrivalHours / MAX_HOUR) * 100 : null
+  const truck = route ? truckStatus(route, departure, hour) : null
 
   return (
     <div className="pointer-events-auto rounded-xl border border-slate-200 bg-white/95 p-2.5 shadow-lg backdrop-blur sm:p-3">
@@ -106,6 +109,29 @@ export function ForecastSlider({ departure, arrivalHours, heatmapState, onRetry 
           </label>
         </div>
       </div>
+
+      {route && truck && (
+        <p className="mb-1.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-slate-600" aria-live="off">
+          {truck.arrived ? (
+            <span>
+              Route {route.id} has arrived ({formatClock(route.arrival_time)}).
+            </span>
+          ) : (
+            <>
+              <span>
+                Truck on Route {route.id}: mile {formatRiskMiles(truck.mile)} of {formatRiskMiles(route.distance_mi)}
+              </span>
+              <span className="text-slate-400">·</span>
+              <span>
+                nearest checkpoint, mi {Math.round(truck.nearest.mile)} (ETA {formatClock(truck.nearest.eta)}):
+              </span>
+              <span className="font-semibold" style={{ color: riskColor(truck.nearest.risk?.level) }}>
+                {truck.nearest.risk ? riskLabel(truck.nearest.risk.level) : 'No forecast'}
+              </span>
+            </>
+          )}
+        </p>
+      )}
 
       <div className="relative">
         <input

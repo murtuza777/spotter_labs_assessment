@@ -75,7 +75,7 @@ function App() {
                   />
                 ))}
               </div>
-              {selected && <CheckpointList route={selected} />}
+              {selected && <CheckpointList route={selected} windMetric={plan.request.wind_metric} />}
             </section>
           )}
 
@@ -97,7 +97,7 @@ function App() {
           <div className="pointer-events-none absolute inset-x-2 bottom-2 z-10 mx-auto max-w-3xl sm:inset-x-3 sm:bottom-8">
             <ForecastSlider
               departure={plan.request.departure_time}
-              arrivalHours={selected ? selected.duration_s / 3600 : null}
+              route={selected ?? null}
               heatmapState={heatmap.isError ? 'error' : heatmap.data ? 'ready' : 'loading'}
               onRetry={() => heatmap.refetch()}
             />

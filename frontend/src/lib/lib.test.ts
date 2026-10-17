@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { HeatmapResponse, PlannedRoute, TripPlan } from '../api/types'
-import { formatDuration } from './format'
+import { formatDuration, formatRiskMiles } from './format'
 import { boundsOf, cumulativeMiles, decodePolyline, interpolateAlong, interpolateSeries } from './geo'
 import { buildHeatmapGeoJSON, frameOpacities, heatmapGeometry, toWeight } from './heatmap'
 import { severityIndex } from './risk'
-import { buildRouteModels, truckPosition } from './routeModel'
+import { buildRouteModels, truckPosition, truckStatus } from './routeModel'
 
 describe('decodePolyline', () => {
   it('decodes the Google reference example into [lon, lat]', () => {
@@ -140,5 +140,42 @@ describe('formatDuration', () => {
   it('formats hours and minutes', () => {
     expect(formatDuration(27278)).toBe('7h 35m')
     expect(formatDuration(600)).toBe('10m')
+  })
+})
+
+describe('truckStatus', () => {
+  const route = {
+    id: 'A',
+    distance_mi: 100,
+    duration_s: 7200,
+    checkpoints: [
+      { index: 0, mile: 0, eta: '2026-10-18T00:00:00Z', risk: { level: 'low' } },
+      { index: 1, mile: 25, eta: '2026-10-18T01:00:00Z', risk: { level: 'high' } },
+      { index: 2, mile: 100, eta: '2026-10-18T02:00:00Z', risk: null },
+    ],
+  } as unknown as PlannedRoute
+
+  it('reports mile and nearest checkpoint at the slider time', () => {
+    const s = truckStatus(route, '2026-10-18T00:00:00Z', 1.1)
+    expect(s.mile).toBeCloseTo(32.5)
+    expect(s.nearest.index).toBe(1)
+    expect(s.arrived).toBe(false)
+  })
+
+  it('covers both ends of the slider range', () => {
+    expect(truckStatus(route, '2026-10-18T00:00:00Z', 0).mile).toBe(0)
+    const end = truckStatus(route, '2026-10-18T00:00:00Z', 48)
+    expect(end.arrived).toBe(true)
+    expect(end.nearest.index).toBe(2)
+  })
+})
+
+describe('formatRiskMiles', () => {
+  it('never rounds a non-zero risk distance down to 0', () => {
+    expect(formatRiskMiles(0)).toBe('0')
+    expect(formatRiskMiles(0.04)).toBe('0.1')
+    expect(formatRiskMiles(0.4)).toBe('0.4')
+    expect(formatRiskMiles(9.91)).toBe('10.0')
+    expect(formatRiskMiles(25.4)).toBe('25')
   })
 })

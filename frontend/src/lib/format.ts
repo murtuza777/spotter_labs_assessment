@@ -4,6 +4,16 @@ export function formatMiles(mi: number): string {
   return `${mi.toLocaleString(undefined, { maximumFractionDigits: mi < 10 ? 1 : 0 })} mi`
 }
 
+/**
+ * Risk miles must never round down to 0: 0.4 No Travel miles is still No Travel.
+ * Exactly 0 shows "0", under 10 keeps one decimal, larger values are whole miles.
+ */
+export function formatRiskMiles(mi: number): string {
+  if (mi <= 0) return '0'
+  if (mi < 10) return (Math.ceil(mi * 10) / 10).toFixed(1)
+  return Math.round(mi).toLocaleString()
+}
+
 export function formatDuration(seconds: number): string {
   const totalMinutes = Math.round(seconds / 60)
   const h = Math.floor(totalMinutes / 60)

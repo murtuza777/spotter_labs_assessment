@@ -1,4 +1,4 @@
-import { METRIC_THRESHOLDS, METRIC_UNIT, RISK_COLOR, RISK_LABEL, RISK_LEVELS } from '../../lib/risk'
+import { METRIC_THRESHOLDS, METRIC_UNIT, RISK_COLOR, RISK_LABEL, RISK_LEVELS, UNKNOWN_COLOR } from '../../lib/risk'
 import { useTripStore } from '../../store/tripStore'
 
 export function Legend() {
@@ -26,7 +26,15 @@ export function Legend() {
             {thresholds && <span className="hidden tabular-nums text-slate-500 sm:inline">{rangeFor(i)}</span>}
           </li>
         ))}
+        <li className="flex items-center gap-2">
+          <span className="h-2.5 w-4 rounded-sm" style={{ backgroundColor: UNKNOWN_COLOR }} />
+          <span className="text-slate-700">No forecast</span>
+        </li>
       </ul>
+      <p className="mt-1 hidden max-w-44 text-[10px] leading-snug text-slate-500 sm:block">
+        Route and checkpoints: forecast at the truck's ETA. Heatmap: forecast at the slider time;
+        untinted means no forecast data.
+      </p>
     </div>
   )
 }

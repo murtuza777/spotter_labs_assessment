@@ -64,6 +64,24 @@ export interface PlannedRoute {
   checkpoints: Checkpoint[]
 }
 
+export interface WeatherStats {
+  cells: number
+  cached: number
+  fetched: number
+  failed: number
+  ms: number
+}
+
+/** Request accounting from the backend: provider calls, weather cache use, timings. */
+export interface PlanMeta {
+  /** Calls into the (cached) routing layer; cache hits never reach TomTom. */
+  routing_lookups: number
+  routing_ms: number
+  checkpoints: number
+  weather: WeatherStats
+  total_ms: number
+}
+
 export interface TripPlan {
   generated_at: string
   request: PlanRequest
@@ -71,6 +89,7 @@ export interface TripPlan {
   recommendation: { reason: string; warnings: string[] }
   routes: PlannedRoute[]
   notices: string[]
+  meta?: PlanMeta
 }
 
 export type HeatmapMetric = 'risk' | 'gust' | 'rain' | 'snow'
@@ -81,6 +100,7 @@ export interface HeatmapResponse {
   grid_step_deg: number
   levels: RiskLevel[]
   frames: Record<HeatmapMetric, (number | null)[][]> // [hour][point]
+  meta?: { weather: WeatherStats; unknown_cells: number }
 }
 
 export interface ApiErrorBody {

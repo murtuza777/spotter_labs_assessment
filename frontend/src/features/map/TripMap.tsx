@@ -147,6 +147,7 @@ export default function TripMap({ plan, heatmap }: Props) {
           route={popupRoute}
           checkpoint={popupCheckpoint}
           loadLb={plan.request.load_weight_lb}
+          windMetric={plan.request.wind_metric}
           onClose={() => focusCheckpoint(null)}
         />
       )}
