@@ -24,7 +24,7 @@ Show the code briefly.
 - `domain/risk.py`: the bands are half-open, and a value on a shared edge goes to the higher level. Load rules only change wind, and checkpoint risk is the worst of the three factors.
 - `domain/timebucket.py`: Open-Meteo stamps each hour's values at its end, so the ETA rounds **up** to the next hour.
 - `domain/scoring.py`: each checkpoint owns the miles from midpoint to midpoint, so the miles add up exactly to the route length.
-- `domain/recommend.py`: the ranking order. **No Travel goes first**, and say why. Rounding means float noise counts as a tie.
+- `domain/recommend.py`: the ranking is exactly the assessment's four criteria. No Travel is a separate **eligibility constraint** (never recommended; no pick at all if every route has it), and missing forecasts make a route provisional at best. Rounding means float noise counts as a tie.
 - `services/plan_trip.py`: ETAs come from TomTom's per-point travel times. If TomTom returns fewer than 3 routes, detour waypoints fill the gap.
 - Run `uv run pytest -q` → 204 passed, then `npm run test:e2e` → 12 passed in Chromium. Scroll `test_risk.py` to show the edge cases.
 

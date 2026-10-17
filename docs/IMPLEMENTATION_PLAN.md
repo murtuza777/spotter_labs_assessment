@@ -84,7 +84,8 @@ The brief leaves some cases open. These are the interpretations we will implemen
 
 - **Miles at each level:** a checkpoint "owns" the route from the midpoint with the previous checkpoint to the midpoint with the next one. The first checkpoint starts at mile 0 and the last ends at the destination. The owned miles add up exactly to the route length, so a single bad checkpoint isn't double-counted.
 - **Average risk** = Σ(score × miles) / total miles, using scores 0–4.
-- **Recommendation:** sort the routes lexicographically by
+- **Recommendation (revised after review, 2026-10-18):** rank exactly by the assessment's four criteria. No Travel and missing forecasts are an eligibility constraint applied first, not ranking criteria: a route with No Travel miles is never recommended; a route missing forecasts is only a *provisional* pick when no fully forecast route without No Travel exists; with No Travel on every route, nothing is recommended. The original design below put No Travel miles and coverage *into* the sort key; that was replaced.
+- *(Superseded)* sort the routes lexicographically by
   1. **No Travel miles**, fewest first. The brief doesn't list this, but No Travel is worse than Severe, so it has to come first. Otherwise a route with No Travel miles could beat one with Severe miles.
   2. **Forecast coverage**: fully forecast routes before routes with unforecast miles *(added in the audit, D1)*. Unknown miles are unscored, so without this gate a route whose weather couldn't be fetched would look as safe as calm weather. It sits after No Travel so a route with *known* No Travel never wins over one with unknowns.
   3. **Severe miles**, fewest first

@@ -32,10 +32,11 @@ The brief leaves a few cases open. These are the choices made, and they're all c
 | **Forecast hour** | Open-Meteo stamps each hour's gusts and precipitation at the **end** of that hour, so a truck passing at 14:20 uses the 15:00 value (the ETA rounded up to the next hour). |
 | **Miles per level** | Each checkpoint owns the stretch from the midpoint with the previous checkpoint to the midpoint with the next one. The shares add up exactly to the route length, and one bad checkpoint isn't double-counted. |
 | **Average risk** | Miles-weighted mean of the scores Low 0, Moderate 1, High 2, Severe 3, No Travel 4. |
-| **Ranking** | **No Travel miles are compared first**, then **forecast coverage**, then the brief's order: Severe miles → High miles → average risk → travel time. The brief starts at "fewest Severe miles", but read literally that would let a route with No Travel miles beat one with only Severe miles. Miles are compared at 0.1 mi and average risk at 0.01, so float noise counts as a tie and the next criterion decides. |
-| **Missing weather** | A checkpoint with no valid forecast (missing, null, NaN or negative values, or outside the fetched forecast window) is **unknown**: it's shown in grey as "No forecast", its miles aren't scored, and a fully forecast route always ranks ahead of a partly forecast one. Unknown is never treated as calm. |
-| **No safe route** | If every route has No Travel miles, the banner says "No safe route at this departure time", calls the pick the "least risky option" and suggests delaying. Every route card with No Travel miles is flagged. |
-| **Detour routes** | If TomTom returns fewer than 3 distinct alternatives, the app asks TomTom for routes through a waypoint beside the main route. These are real TomTom truck routes, but they're labeled "Detour option" everywhere and explained in a notice. If those fail too, fewer routes are shown. |
+| **Ranking** | Exactly the assessment's order, and nothing else: fewest **Severe miles** → fewest **High miles** → lowest **average risk** → shortest **travel time** (lexicographic, never a weighted sum). Miles are compared at 0.1 mi and average risk at 0.01, so float noise counts as a tie and the next criterion decides. Full ties keep TomTom's order. |
+| **No Travel (safety constraint)** | Applied *before* ranking, not as an extra criterion: a route with any No Travel miles is **not eligible** and is never recommended. It's still shown, ranked after the eligible routes, with its badge and exclusion reason. If every route has No Travel, **nothing is recommended**. |
+| **Missing weather** | A checkpoint with no valid forecast (missing, null, NaN or negative values, or outside the fetched forecast window) is **unknown**: it's shown in grey as "No forecast", its miles aren't scored, and the route can't be confirmed safe: it's not eligible while a fully forecast route without No Travel exists. If no route has a complete forecast, the best one is shown as a clearly labeled **provisional pick**. Unknown is never treated as calm, and the heatmap marks missing cells with grey dots. |
+| **No safe route** | If every route has No Travel miles, the banner says "No safe route at this departure time", **recommends nothing**, lists each route's No Travel miles, and suggests delaying. |
+| **Route alternatives** | TomTom's alternatives are used as-is. Two count as the same route if they share ≥ 95 % of their road, measured geometrically: the share of each route's length within 0.3 mi of the other. If fewer than 3 distinct routes remain, the app asks TomTom for a route through a waypoint placed perpendicular to the origin→destination line at the main route's midpoint, offset by 15 % of the straight-line distance (15–100 mi), one on each side. A detour is kept only if it's distinct (≤ 85 % shared with every route), reasonable (≤ 1.4× the fastest route's distance and ≤ 1.5× its drive time), and doesn't drive out to the waypoint and back. Kept detours are labeled "Detour option" and their waypoint is shown on the map. Otherwise fewer routes are shown, with a notice saying why. |
 | **Timestamps** | The departure must include a UTC offset. A naive time is rejected rather than guessed, because a wrong guess shifts every forecast hour. The UI sends the browser's local time as ISO with an offset. |
 | **Slider window** | 0–48 h **from the departure time**, so the slider always covers the trip itself. |
 | **Routing weight** | Load plus a 35,000 lb empty tractor-trailer (`TRUCK_TARE_LB`), sent to TomTom as gross vehicle weight. The risk rules use the load as entered. |
@@ -116,17 +117,18 @@ cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 cd frontend && npx playwright install chromium && npm run test:e2e
 ```
 
-- **Backend:** 204 tests, with no network needed: providers are mocked with recorded fixtures. Coverage includes:
+- **Backend:** 218 tests, with no network needed: providers are mocked with recorded fixtures. Coverage includes:
   - **Rules:** every threshold edge (24.9/25/34.9/35…, rain 0.0999/0.10/…/1.00/1.0001), the load edges (30,000 vs 30,001 and 40,000 vs 40,001), and wind/rain/snow combinations.
   - **Bad data:** invalid, NaN or negative weather readings; malformed TomTom and Open-Meteo payloads; bounded retries.
-  - **Ranking:** each tie-breaker, the No Travel and coverage gates, and that the API's route order doesn't decide the winner.
+  - **Ranking:** that the criteria are exactly the assessment's four, each tie-breaker, float-noise ties, deterministic full ties, that the provider's order never decides the winner (all permutations), and the eligibility constraint (No Travel never recommended, provisional picks, no recommendation when every route has No Travel).
+  - **Routes:** geometric route similarity, duplicate alternatives, and detour rejection (too long, too slow, repeating an existing route, out-and-back spurs).
   - **Trip pipeline:** owned-miles sums, the round-up forecast-hour rule, ETA-based sampling, 1, 2 or 3 TomTom alternatives (detour fallback), and the route and weather caches.
   - **API:** validation, error shapes and status codes, and that error responses never leak keys or internals.
 - **Frontend unit:** 14 tests for polyline decoding, heatmap weights and cross-fade, the truck position and status, and how risk miles are formatted.
-- **End-to-end:** 12 Playwright tests in Chromium against the real UI and MapLibre map. Only `/api/*` and the basemap style are mocked, using fixtures generated by the real backend pipeline (`backend/scripts/export_e2e_fixtures.py`). They cover:
+- **End-to-end:** 15 Playwright tests in Chromium against the real UI and MapLibre map. Only `/api/*` and the basemap style are mocked, using fixtures generated by the real backend pipeline (`backend/scripts/export_e2e_fixtures.py`). They cover:
   - **Main flow:** form → loading state → 3 routes in backend rank order → selecting each route → checkpoint popup → the map fitted to the routes.
   - **Slider:** 0 / 12.5 / 48 h (frame opacities and truck status), metric switching, and that the slider triggers no refetch.
-  - **Safety display:** No Travel and missing-forecast cases.
+  - **Safety display:** a No Travel route excluded with its reason; no recommendation when every route has No Travel; a provisional pick with missing forecasts and grey heatmap dots; a detour labeled with its waypoint; only two routes, with the notice; and the checkpoint risk breakdown.
   - **Failures:** validation errors, a 502 from a provider, and server-side field errors.
   - **Other:** resubmitting, refreshing, and a 375 px phone layout.
 - **CI:** [GitHub Actions](.github/workflows/ci.yml) runs all three suites on every push.
