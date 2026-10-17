@@ -7,6 +7,8 @@ const PORT = 5174
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
+  // Each test runs a WebGL map; more parallel browsers than this overload laptops and CI.
+  workers: process.env.CI ? 2 : 3,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [['list']],

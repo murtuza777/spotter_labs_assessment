@@ -5,7 +5,7 @@ import { expect, type Page } from '@playwright/test'
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 
-export type Scenario = 'mixed' | 'no_safe_route' | 'partial_forecast'
+export type Scenario = 'mixed' | 'no_safe_route' | 'partial_forecast' | 'detour' | 'two_routes'
 
 /** Fixtures exported from the real backend pipeline (backend/scripts/export_e2e_fixtures.py). */
 export function fixture<T = any>(name: string): T {

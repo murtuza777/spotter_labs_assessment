@@ -16,18 +16,42 @@
   "sample_interval_mi": 25,
   "wind_metric": "gust"
  },
- "recommended_route_id": "C",
+ "recommended_route_id": null,
  "recommendation": {
-  "reason": "Route C beats Route B on No Travel miles (489.7 mi vs 525.6 mi) and Route A on No Travel miles (489.7 mi vs 534.9 mi).",
+  "status": "none",
+  "route_id": null,
+  "reason": "No route is recommended: every route has No Travel conditions.",
+  "exclusions": [
+   {
+    "route_id": "A",
+    "reason": "Route A is not eligible: No Travel conditions on 534.9 mi (safety constraint)."
+   },
+   {
+    "route_id": "B",
+    "reason": "Route B is not eligible: No Travel conditions on 525.6 mi (safety constraint)."
+   },
+   {
+    "route_id": "C",
+    "reason": "Route C is not eligible: No Travel conditions on 489.7 mi (safety constraint)."
+   }
+  ],
   "warnings": [
-   "Every route has No Travel conditions at this departure time. Route C is only the least risky option (489.7 mi of No Travel). Consider delaying the trip."
+   "Every route has No Travel conditions at this departure time. Consider delaying the trip."
+  ],
+  "ranking": [
+   "Severe miles",
+   "High miles",
+   "average risk",
+   "travel time"
   ]
  },
  "routes": [
   {
    "id": "A",
    "source": "routing_api",
-   "rank": 3,
+   "rank": 1,
+   "eligibility": "no_travel",
+   "waypoint": null,
    "distance_mi": 534.9,
    "duration_s": 27278,
    "arrival_time": "2026-10-18T21:34:38Z",
@@ -41,6 +65,7 @@
      "no_travel": 534.9
     },
     "unknown_miles": 0.0,
+    "forecast_coverage": 1.0,
     "avg_risk": 4.0,
     "max_level": "no_travel"
    },
@@ -60,6 +85,10 @@
      "lon": -104.99027,
      "eta": "2026-10-18T14:00:00Z",
      "forecast_hour": "2026-10-18T14:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -71,6 +100,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -81,6 +139,10 @@
      "lon": -104.9803,
      "eta": "2026-10-18T14:26:43Z",
      "forecast_hour": "2026-10-18T15:00:00Z",
+     "weather_cell": {
+      "lat": 40.0,
+      "lon": -105.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -92,6 +154,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -102,6 +193,10 @@
      "lon": -104.99251,
      "eta": "2026-10-18T14:46:25Z",
      "forecast_hour": "2026-10-18T15:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -105.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -113,6 +208,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -123,6 +247,10 @@
      "lon": -104.98637,
      "eta": "2026-10-18T15:05:20Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -105.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -134,6 +262,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -144,6 +301,10 @@
      "lon": -104.85066,
      "eta": "2026-10-18T15:24:30Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 41.0,
+      "lon": -104.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -155,6 +316,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -165,6 +355,10 @@
      "lon": -105.30564,
      "eta": "2026-10-18T15:45:55Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 41.25,
+      "lon": -105.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -176,6 +370,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -186,6 +409,10 @@
      "lon": -105.63016,
      "eta": "2026-10-18T16:07:37Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 41.25,
+      "lon": -105.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -197,6 +424,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -207,6 +463,10 @@
      "lon": -106.03823,
      "eta": "2026-10-18T16:28:05Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 41.5,
+      "lon": -106.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -218,6 +478,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -228,6 +517,10 @@
      "lon": -106.39901,
      "eta": "2026-10-18T16:48:51Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 41.75,
+      "lon": -106.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -239,6 +532,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -249,6 +571,10 @@
      "lon": -106.85159,
      "eta": "2026-10-18T17:09:35Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 41.75,
+      "lon": -106.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -260,6 +586,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -270,6 +625,10 @@
      "lon": -107.32061,
      "eta": "2026-10-18T17:30:24Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 41.75,
+      "lon": -107.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -281,6 +640,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -291,6 +679,10 @@
      "lon": -107.78455,
      "eta": "2026-10-18T17:50:57Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 41.75,
+      "lon": -107.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -302,6 +694,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -312,6 +733,10 @@
      "lon": -108.24407,
      "eta": "2026-10-18T18:10:50Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 41.75,
+      "lon": -108.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -323,6 +748,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -333,6 +787,10 @@
      "lon": -108.71346,
      "eta": "2026-10-18T18:32:07Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 41.75,
+      "lon": -108.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -344,6 +802,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -354,6 +841,10 @@
      "lon": -109.15242,
      "eta": "2026-10-18T18:52:12Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 41.5,
+      "lon": -109.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -365,6 +856,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -375,6 +895,10 @@
      "lon": -109.56484,
      "eta": "2026-10-18T19:13:07Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 41.5,
+      "lon": -109.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -386,6 +910,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -396,6 +949,10 @@
      "lon": -110.01535,
      "eta": "2026-10-18T19:33:13Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 41.5,
+      "lon": -110.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -407,6 +964,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -417,6 +1003,10 @@
      "lon": -110.43124,
      "eta": "2026-10-18T19:53:29Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 41.25,
+      "lon": -110.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -428,6 +1018,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -438,6 +1057,10 @@
      "lon": -110.8782,
      "eta": "2026-10-18T20:14:43Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 41.25,
+      "lon": -111.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -449,6 +1072,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -459,6 +1111,10 @@
      "lon": -111.23583,
      "eta": "2026-10-18T20:35:08Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 41.0,
+      "lon": -111.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -470,6 +1126,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -480,6 +1165,10 @@
      "lon": -111.40098,
      "eta": "2026-10-18T20:55:52Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -111.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -491,6 +1180,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -501,6 +1219,10 @@
      "lon": -111.76779,
      "eta": "2026-10-18T21:18:50Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -111.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -512,6 +1234,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -522,6 +1273,10 @@
      "lon": -111.89099,
      "eta": "2026-10-18T21:34:38Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -112.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -533,6 +1288,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     }
@@ -542,6 +1326,8 @@
    "id": "B",
    "source": "routing_api",
    "rank": 2,
+   "eligibility": "no_travel",
+   "waypoint": null,
    "distance_mi": 525.6,
    "duration_s": 28863,
    "arrival_time": "2026-10-18T22:01:03Z",
@@ -555,6 +1341,7 @@
      "no_travel": 525.6
     },
     "unknown_miles": 0.0,
+    "forecast_coverage": 1.0,
     "avg_risk": 4.0,
     "max_level": "no_travel"
    },
@@ -574,6 +1361,10 @@
      "lon": -104.99027,
      "eta": "2026-10-18T14:00:00Z",
      "forecast_hour": "2026-10-18T14:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -585,6 +1376,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -595,6 +1415,10 @@
      "lon": -105.39888,
      "eta": "2026-10-18T14:28:31Z",
      "forecast_hour": "2026-10-18T15:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -606,6 +1430,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -616,6 +1469,10 @@
      "lon": -105.78629,
      "eta": "2026-10-18T14:52:29Z",
      "forecast_hour": "2026-10-18T15:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -627,6 +1484,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -637,6 +1523,10 @@
      "lon": -106.14345,
      "eta": "2026-10-18T15:16:08Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 39.5,
+      "lon": -106.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -648,6 +1538,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -658,6 +1577,10 @@
      "lon": -106.44088,
      "eta": "2026-10-18T15:38:45Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 39.5,
+      "lon": -106.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -669,6 +1592,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -679,6 +1631,10 @@
      "lon": -106.83093,
      "eta": "2026-10-18T15:59:33Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -106.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -690,6 +1646,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -700,6 +1685,10 @@
      "lon": -107.24521,
      "eta": "2026-10-18T16:21:51Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 39.5,
+      "lon": -107.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -711,6 +1700,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -721,6 +1739,10 @@
      "lon": -107.67924,
      "eta": "2026-10-18T16:43:39Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 39.5,
+      "lon": -107.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -732,6 +1754,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -742,6 +1793,10 @@
      "lon": -108.08881,
      "eta": "2026-10-18T17:02:50Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 39.5,
+      "lon": -108.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -753,6 +1808,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -763,6 +1847,10 @@
      "lon": -108.3103,
      "eta": "2026-10-18T17:23:32Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 39.25,
+      "lon": -108.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -774,6 +1862,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -784,6 +1901,10 @@
      "lon": -108.71879,
      "eta": "2026-10-18T17:43:57Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 39.25,
+      "lon": -108.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -795,6 +1916,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -805,6 +1955,10 @@
      "lon": -109.12111,
      "eta": "2026-10-18T18:03:29Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 39.25,
+      "lon": -109.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -816,6 +1970,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -826,6 +2009,10 @@
      "lon": -109.43607,
      "eta": "2026-10-18T18:22:02Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 39.0,
+      "lon": -109.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -837,6 +2024,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -847,6 +2063,10 @@
      "lon": -109.87973,
      "eta": "2026-10-18T18:40:32Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 39.0,
+      "lon": -110.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -858,6 +2078,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -868,6 +2117,10 @@
      "lon": -110.28987,
      "eta": "2026-10-18T19:00:19Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 39.0,
+      "lon": -110.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -879,6 +2132,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -889,6 +2171,10 @@
      "lon": -110.38449,
      "eta": "2026-10-18T19:23:28Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 39.25,
+      "lon": -110.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -900,6 +2186,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -910,6 +2225,10 @@
      "lon": -110.72643,
      "eta": "2026-10-18T19:48:18Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 39.5,
+      "lon": -110.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -921,6 +2240,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -931,6 +2279,10 @@
      "lon": -110.93999,
      "eta": "2026-10-18T20:17:08Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -111.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -942,6 +2294,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -952,6 +2333,10 @@
      "lon": -111.3096,
      "eta": "2026-10-18T20:43:04Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 40.0,
+      "lon": -111.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -963,6 +2348,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -973,6 +2387,10 @@
      "lon": -111.64661,
      "eta": "2026-10-18T21:14:55Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -111.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -984,6 +2402,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -994,6 +2441,10 @@
      "lon": -111.88645,
      "eta": "2026-10-18T21:34:55Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -112.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1005,6 +2456,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1015,6 +2495,10 @@
      "lon": -111.89957,
      "eta": "2026-10-18T21:57:33Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -112.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1026,6 +2510,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1036,6 +2549,10 @@
      "lon": -111.89099,
      "eta": "2026-10-18T22:01:03Z",
      "forecast_hour": "2026-10-18T23:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -112.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1047,6 +2564,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     }
@@ -1055,7 +2601,9 @@
   {
    "id": "C",
    "source": "routing_api",
-   "rank": 1,
+   "rank": 3,
+   "eligibility": "no_travel",
+   "waypoint": null,
    "distance_mi": 489.7,
    "duration_s": 32291,
    "arrival_time": "2026-10-18T22:58:11Z",
@@ -1069,6 +2617,7 @@
      "no_travel": 489.7
     },
     "unknown_miles": 0.0,
+    "forecast_coverage": 1.0,
     "avg_risk": 4.0,
     "max_level": "no_travel"
    },
@@ -1088,6 +2637,10 @@
      "lon": -104.99027,
      "eta": "2026-10-18T14:00:00Z",
      "forecast_hour": "2026-10-18T14:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1099,6 +2652,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1109,6 +2691,10 @@
      "lon": -105.39926,
      "eta": "2026-10-18T14:28:33Z",
      "forecast_hour": "2026-10-18T15:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1120,6 +2706,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1130,6 +2745,10 @@
      "lon": -105.78712,
      "eta": "2026-10-18T14:52:31Z",
      "forecast_hour": "2026-10-18T15:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -105.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1141,6 +2760,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1151,6 +2799,10 @@
      "lon": -106.13444,
      "eta": "2026-10-18T15:19:55Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 39.75,
+      "lon": -106.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1162,6 +2814,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1172,6 +2853,10 @@
      "lon": -106.37462,
      "eta": "2026-10-18T15:46:49Z",
      "forecast_hour": "2026-10-18T16:00:00Z",
+     "weather_cell": {
+      "lat": 40.0,
+      "lon": -106.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1183,6 +2868,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1193,6 +2907,10 @@
      "lon": -106.51624,
      "eta": "2026-10-18T16:14:34Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -106.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1204,6 +2922,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1214,6 +2961,10 @@
      "lon": -106.81081,
      "eta": "2026-10-18T16:45:44Z",
      "forecast_hour": "2026-10-18T17:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -106.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1225,6 +2976,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1235,6 +3015,10 @@
      "lon": -107.19026,
      "eta": "2026-10-18T17:19:35Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -107.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1246,6 +3030,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1256,6 +3069,10 @@
      "lon": -107.62771,
      "eta": "2026-10-18T17:50:26Z",
      "forecast_hour": "2026-10-18T18:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -107.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1267,6 +3084,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1277,6 +3123,10 @@
      "lon": -108.06136,
      "eta": "2026-10-18T18:14:46Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -108.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1288,6 +3138,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1298,6 +3177,10 @@
      "lon": -108.44989,
      "eta": "2026-10-18T18:39:28Z",
      "forecast_hour": "2026-10-18T19:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -108.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1309,6 +3192,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1319,6 +3231,10 @@
      "lon": -108.85185,
      "eta": "2026-10-18T19:02:58Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -108.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1330,6 +3246,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1340,6 +3285,10 @@
      "lon": -109.27833,
      "eta": "2026-10-18T19:27:17Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -109.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1351,6 +3300,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1361,6 +3339,10 @@
      "lon": -109.60351,
      "eta": "2026-10-18T19:58:40Z",
      "forecast_hour": "2026-10-18T20:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -109.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1372,6 +3354,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1382,6 +3393,10 @@
      "lon": -110.01161,
      "eta": "2026-10-18T20:27:47Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -110.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1393,6 +3408,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1403,6 +3447,10 @@
      "lon": -110.37032,
      "eta": "2026-10-18T20:52:38Z",
      "forecast_hour": "2026-10-18T21:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -110.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1414,6 +3462,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1424,6 +3501,10 @@
      "lon": -110.81046,
      "eta": "2026-10-18T21:18:29Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -110.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1435,6 +3516,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1445,6 +3555,10 @@
      "lon": -111.208,
      "eta": "2026-10-18T21:43:21Z",
      "forecast_hour": "2026-10-18T22:00:00Z",
+     "weather_cell": {
+      "lat": 40.25,
+      "lon": -111.25
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1456,6 +3570,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1466,6 +3609,10 @@
      "lon": -111.42403,
      "eta": "2026-10-18T22:13:47Z",
      "forecast_hour": "2026-10-18T23:00:00Z",
+     "weather_cell": {
+      "lat": 40.5,
+      "lon": -111.5
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1477,6 +3624,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1487,6 +3663,10 @@
      "lon": -111.69316,
      "eta": "2026-10-18T22:38:12Z",
      "forecast_hour": "2026-10-18T23:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -111.75
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1498,6 +3678,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     },
@@ -1508,6 +3717,10 @@
      "lon": -111.89099,
      "eta": "2026-10-18T22:58:11Z",
      "forecast_hour": "2026-10-18T23:00:00Z",
+     "weather_cell": {
+      "lat": 40.75,
+      "lon": -112.0
+     },
      "weather": {
       "wind_mph": 40.0,
       "gust_mph": 60.0,
@@ -1519,6 +3732,35 @@
       "score": 4,
       "reasons": [
        "Gusts 60 mph: No Travel"
+      ],
+      "factors": [
+       {
+        "name": "wind",
+        "label": "gusts",
+        "value": 60.0,
+        "unit": "mph",
+        "base_level": "no_travel",
+        "level": "no_travel",
+        "load_rule": null
+       },
+       {
+        "name": "rain",
+        "label": "rain",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       },
+       {
+        "name": "snow",
+        "label": "snow",
+        "value": 0.0,
+        "unit": "in/hr",
+        "base_level": "low",
+        "level": "low",
+        "load_rule": null
+       }
       ]
      }
     }
@@ -1528,15 +3770,15 @@
  "notices": [],
  "meta": {
   "routing_lookups": 1,
-  "routing_ms": 2,
+  "routing_ms": 47,
   "checkpoints": 67,
   "weather": {
    "cells": 59,
    "cached": 0,
    "fetched": 59,
    "failed": 0,
-   "ms": 5
+   "ms": 4
   },
-  "total_ms": 17
+  "total_ms": 60
  }
 }
