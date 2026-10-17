@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
+from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
 
 from planner.domain.geo import decode_polyline, haversine_mi
@@ -23,9 +24,27 @@ class PlaceSerializer(serializers.Serializer):
         return Place(label=data["label"], lat=data["lat"], lon=data["lon"])
 
 
+TZ_REQUIRED = "Include a timezone offset, e.g. 2026-10-18T14:00:00Z."
+
+
+class AwareDateTimeField(serializers.DateTimeField):
+    """Rejects timestamps without a UTC offset instead of silently assuming UTC.
+
+    A naive '2026-10-18T14:00' is ambiguous for a cross-country trip (it could be any of
+    four US time zones), and guessing wrong shifts every checkpoint's forecast hour.
+    """
+
+    def to_internal_value(self, value: object) -> datetime:
+        if isinstance(value, str):
+            parsed = parse_datetime(value.strip())
+            if parsed is not None and parsed.tzinfo is None:
+                raise serializers.ValidationError(TZ_REQUIRED)
+        return super().to_internal_value(value)
+
+
 def _validate_departure(value: datetime) -> datetime:
     if value.tzinfo is None:
-        raise serializers.ValidationError("Include a timezone offset, e.g. 2026-10-18T14:00:00Z.")
+        raise serializers.ValidationError(TZ_REQUIRED)
     now = datetime.now(UTC)
     if value < now - MAX_DEPARTURE_BEHIND:
         raise serializers.ValidationError("Departure can't be more than an hour in the past.")
@@ -37,7 +56,7 @@ def _validate_departure(value: datetime) -> datetime:
 class PlanRequestSerializer(serializers.Serializer):
     origin = PlaceSerializer()
     destination = PlaceSerializer()
-    departure_time = serializers.DateTimeField(default_timezone=UTC)
+    departure_time = AwareDateTimeField()
     load_weight_lb = serializers.FloatField(min_value=0, max_value=MAX_LOAD_LB)
     sample_interval_mi = serializers.ChoiceField(choices=ALLOWED_INTERVALS_MI)
     wind_metric = serializers.ChoiceField(choices=WIND_METRICS, default="gust")
@@ -69,7 +88,7 @@ class HeatmapRequestSerializer(serializers.Serializer):
     routes = serializers.ListField(
         child=serializers.CharField(max_length=200_000), min_length=1, max_length=3
     )
-    departure_time = serializers.DateTimeField(default_timezone=UTC)
+    departure_time = AwareDateTimeField()
     load_weight_lb = serializers.FloatField(min_value=0, max_value=MAX_LOAD_LB)
     wind_metric = serializers.ChoiceField(choices=WIND_METRICS, default="gust")
 

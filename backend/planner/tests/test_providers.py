@@ -8,7 +8,7 @@ from planner.domain.models import LatLon
 from planner.providers.base import ProviderError
 from planner.providers.openmeteo import OpenMeteoWeather, parse_response
 from planner.providers.photon import PhotonGeocoder
-from planner.providers.tomtom import BASE_URL, TomTomRouting
+from planner.providers.tomtom import BASE_URL, TomTomRouting, parse_route
 from planner.tests.conftest import load_fixture
 
 DEN = LatLon(39.7392, -104.9903)
@@ -168,3 +168,173 @@ def test_photon_failure_is_provider_error() -> None:
     respx.get("https://photon.test/api").mock(return_value=httpx.Response(500))
     with pytest.raises(ProviderError):
         PhotonGeocoder(httpx.Client(), base_url="https://photon.test/api").search("x")
+
+
+def _hourly(**overrides):
+    hourly = {
+        "time": [0, 3600, 7200],
+        "wind_speed_10m": [5, 6, 7],
+        "wind_gusts_10m": [10, 11, 12],
+        "rain": [0.0, 0.1, 0.2],
+        "showers": [0.0, 0.0, 0.05],
+        "snowfall": [0, 0, 0],
+    }
+    hourly.update(overrides)
+    return {"hourly": hourly}
+
+
+@pytest.mark.parametrize(
+    ("overrides", "unknown_hours"),
+    [
+        ({"wind_gusts_10m": [10, None, 12]}, [1]),  # null reading
+        ({"wind_gusts_10m": [10, "x", 12]}, [1]),  # string
+        ({"snowfall": [0, -0.5, 0]}, [1]),  # negative
+        ({"rain": [0.0, float("nan"), 0.2]}, [1]),  # NaN
+        ({"wind_gusts_10m": [10]}, [1, 2]),  # series shorter than the time axis
+        ({"rain": None}, [0, 1, 2]),  # rain missing: total liquid precip is unknown
+        ({"showers": [0, 0, True]}, [2]),  # booleans aren't numbers here
+    ],
+)
+def test_open_meteo_invalid_readings_become_unknown(overrides, unknown_hours) -> None:
+    # Regression (audit D5): these used to slip through and crash or mis-score later.
+    cell = LatLon(1, 1)
+    series = parse_response(_hourly(**overrides), [cell])[cell]
+    for h in range(3):
+        sample = series.at(series.start + timedelta(hours=h))
+        assert (sample is None) == (h in unknown_hours), h
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "oops",
+        42,
+        None,
+        [None],
+        [{"hourly": "x"}],
+        [{"hourly": {"time": [0, 1800]}}],
+        [{"hourly": {"time": []}}],
+    ],
+)
+def test_open_meteo_malformed_payloads_are_dropped(payload) -> None:
+    assert parse_response(payload, [LatLon(1, 1)]) == {}
+
+
+def test_open_meteo_rain_plus_showers_and_end_of_coverage() -> None:
+    cell = LatLon(1, 1)
+    series = parse_response(_hourly(), [cell])[cell]
+    assert series.at(series.start + timedelta(hours=2)).rain_in_hr == pytest.approx(0.25)
+    assert series.at(series.start + timedelta(hours=3)) is None  # beyond fetched coverage
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        {"legs": [{"points": []}]},  # no summary
+        {
+            "legs": [{"points": [{"lon": 1}]}],
+            "summary": {"lengthInMeters": 1, "travelTimeInSeconds": 1},
+        },
+        {"legs": "x", "summary": {}},
+        {"summary": {"lengthInMeters": 1000, "travelTimeInSeconds": 60}},  # no legs
+        {
+            "legs": [{"points": [{"latitude": 1, "longitude": 1}]}],  # a single point
+            "summary": {"lengthInMeters": 1000, "travelTimeInSeconds": 60},
+        },
+        {
+            "legs": [
+                {"points": [{"latitude": 1, "longitude": 1}, {"latitude": 1, "longitude": 2}]}
+            ],
+            "summary": {"lengthInMeters": 0, "travelTimeInSeconds": 60},  # zero length
+        },
+        {
+            "legs": [
+                {"points": [{"latitude": 95, "longitude": 1}, {"latitude": 1, "longitude": 2}]}
+            ],
+            "summary": {"lengthInMeters": 1000, "travelTimeInSeconds": 60},  # impossible latitude
+        },
+        "not a dict",
+    ],
+)
+def test_parse_route_rejects_malformed_routes(route) -> None:
+    # Regression (audit D4): these raised KeyError, which surfaced as a 500.
+    assert parse_route(route) is None
+
+
+def test_parse_route_drops_out_of_range_progress(tomtom_routes) -> None:
+    raw = load_fixture("tomtom_denver_slc.json")["routes"][0]
+    raw["progress"].append({"pointIndex": 10**6, "travelTimeInSeconds": 1, "distanceInMeters": 1})
+    route = parse_route(raw)
+    assert route is not None
+    assert all(p.point_index < len(route.points) for p in route.progress)
+
+
+@respx.mock
+def test_tomtom_all_routes_malformed_is_a_502() -> None:
+    respx.get(url__startswith=BASE_URL).mock(
+        return_value=httpx.Response(200, json={"routes": [{"legs": []}, {"oops": 1}]})
+    )
+    with pytest.raises(ProviderError) as err:
+        TomTomRouting("k", httpx.Client()).routes(
+            DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
+        )
+    assert err.value.code == "routing_unavailable" and err.value.status == 502
+
+
+@respx.mock
+def test_tomtom_non_json_body_is_a_502() -> None:
+    respx.get(url__startswith=BASE_URL).mock(return_value=httpx.Response(200, text="<html>"))
+    with pytest.raises(ProviderError) as err:
+        TomTomRouting("k", httpx.Client()).routes(
+            DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
+        )
+    assert err.value.status == 502
+
+
+@respx.mock
+def test_tomtom_retries_once_on_5xx_then_succeeds() -> None:
+    route = respx.get(url__startswith=BASE_URL).mock(
+        side_effect=[
+            httpx.Response(503),
+            httpx.Response(200, json=load_fixture("tomtom_denver_slc.json")),
+        ]
+    )
+    out = TomTomRouting("k", httpx.Client()).routes(
+        DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
+    )
+    assert len(out) == 3 and route.call_count == 2
+
+
+@respx.mock
+def test_tomtom_retries_once_on_timeout_then_gives_up() -> None:
+    route = respx.get(url__startswith=BASE_URL).mock(side_effect=httpx.ConnectTimeout("slow"))
+    with pytest.raises(ProviderError) as err:
+        TomTomRouting("k", httpx.Client()).routes(
+            DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
+        )
+    assert err.value.code == "routing_unavailable"
+    assert route.call_count == 2  # bounded: one retry, no more
+
+
+@respx.mock
+def test_tomtom_does_not_retry_quota_errors() -> None:
+    route = respx.get(url__startswith=BASE_URL).mock(return_value=httpx.Response(429))
+    with pytest.raises(ProviderError):
+        TomTomRouting("k", httpx.Client()).routes(
+            DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
+        )
+    assert route.call_count == 1
+
+
+@respx.mock
+def test_tomtom_error_message_never_echoes_the_key() -> None:
+    respx.get(url__startswith=BASE_URL).mock(
+        return_value=httpx.Response(
+            400, json={"detailedError": {"message": "bad key=SECRET123 value"}}
+        )
+    )
+    with pytest.raises(ProviderError) as err:
+        TomTomRouting("SECRET123", httpx.Client()).routes(
+            DEN, SLC, depart_at=datetime.now(UTC), vehicle_weight_kg=1
+        )
+    assert "SECRET123" not in err.value.message

@@ -17,6 +17,13 @@ def load_fixture(name: str):
 
 
 @pytest.fixture(autouse=True)
+def _no_retry_sleep(monkeypatch):
+    from planner.providers import tomtom
+
+    monkeypatch.setattr(tomtom, "RETRY_BACKOFF_S", 0)
+
+
+@pytest.fixture(autouse=True)
 def _clear_cache():
     cache.clear()
     yield
