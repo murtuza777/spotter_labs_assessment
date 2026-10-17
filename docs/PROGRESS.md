@@ -15,7 +15,9 @@ Budget: at most 16 h over at most 4 days. Plan: [IMPLEMENTATION_PLAN.md](IMPLEME
 
 | 2026-10-17 | 9: deploy and live smoke test | 0.25 | Blueprint deployed (the Docker image built on Render in 53 s). Live tests: health, CORS (frontend origin only), HSTS/X-Frame headers, geocode, plan (5–7 s with real weather), heatmap (1.8 s), validation errors. Photon refused connections from Render once, so a TomTom Search fallback was added |
 
-**Total so far: about 2.75 h of 16 h**
+| 2026-10-17 | Audit and hardening | 1.0 | Full audit ([AUDIT.md](AUDIT.md)). Fixed: unforecast miles ranked as safe (P0); NaN or negative weather mis-scored (P0); naive timestamps; malformed TomTom/Open-Meteo payloads; risk miles rounded to 0; unknown `/api/` paths returning HTML. Added a route cache (resubmit 3.6 s → 0.2 s), `meta` accounting, a bounded TomTom retry, Playwright e2e (12), and backend tests up from 131 to 204. Not pushed. |
+
+**Total so far: about 3.75 h of 16 h**
 
 ## Remaining
 

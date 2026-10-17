@@ -26,7 +26,7 @@ Show the code briefly.
 - `domain/scoring.py`: each checkpoint owns the miles from midpoint to midpoint, so the miles add up exactly to the route length.
 - `domain/recommend.py`: the ranking order. **No Travel goes first**, and say why. Rounding means float noise counts as a tie.
 - `services/plan_trip.py`: ETAs come from TomTom's per-point travel times. If TomTom returns fewer than 3 routes, detour waypoints fill the gap.
-- Run `uv run pytest -q` → 125 passed. Scroll `test_risk.py` to show the edge cases.
+- Run `uv run pytest -q` → 204 passed, then `npm run test:e2e` → 12 passed in Chromium. Scroll `test_risk.py` to show the edge cases.
 
 ### 4. Map performance (5:45–7:00)
 - Everything on the map is WebGL. Only the truck and the two endpoints are DOM markers.

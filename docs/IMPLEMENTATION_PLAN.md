@@ -86,13 +86,14 @@ The brief leaves some cases open. These are the interpretations we will implemen
 - **Average risk** = Σ(score × miles) / total miles, using scores 0–4.
 - **Recommendation:** sort the routes lexicographically by
   1. **No Travel miles**, fewest first. The brief doesn't list this, but No Travel is worse than Severe, so it has to come first. Otherwise a route with No Travel miles could beat one with Severe miles.
-  2. **Severe miles**, fewest first
-  3. **High miles**, fewest first
-  4. **Average risk**, lowest first (compared at 2 decimal places, so tiny float differences count as a tie)
-  5. **Travel time**, shortest first
+  2. **Forecast coverage**: fully forecast routes before routes with unforecast miles *(added in the audit, D1)*. Unknown miles are unscored, so without this gate a route whose weather couldn't be fetched would look as safe as calm weather. It sits after No Travel so a route with *known* No Travel never wins over one with unknowns.
+  3. **Severe miles**, fewest first
+  4. **High miles**, fewest first
+  5. **Average risk**, lowest first (compared at 2 decimal places, so tiny float differences count as a tie)
+  6. **Travel time**, shortest first
 
-  Miles are compared at 0.1 mi precision. This ordering is how the brief's "balance weather risk and travel time" works: travel time breaks ties once the risk is equal.
-- **Explanation:** compare the winner with the runner-up at the first criterion where they differ, for example "Route B: 0 Severe miles vs 18 on Route A". If **every** route has No Travel miles, show a warning banner ("No safe route at this departure time").
+  Miles are compared at 0.1 mi precision. Criteria 3–6 are exactly the brief's order. This ordering is how the brief's "balance weather risk and travel time" works: travel time breaks ties once the risk is equal.
+- **Explanation:** compare the winner with every other route at the first criterion where they differ, for example "Route B beats Route A on Severe miles (0.0 mi vs 18.0 mi)". If **every** route has No Travel miles, show a warning banner ("No safe route at this departure time") and call the pick the "least risky option".
 
 ### 2.6 The heatmap slider
 
