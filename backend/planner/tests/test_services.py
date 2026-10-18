@@ -321,5 +321,7 @@ def test_weather_outage_gives_no_recommendation_and_says_why(tomtom_routes, depa
     assert all(r.eligibility == "insufficient_forecast" for r in plan.routes)
     [notice] = plan.notices
     assert "Weather was unavailable for" in notice
-    assert "Open-Meteo: HTTP 429: Minutely API request limit exceeded" in notice
-    assert plan.meta["weather"]["errors"] == ["HTTP 429: Minutely API request limit exceeded"]
+    assert "(Refusing: HTTP 429: Minutely API request limit exceeded)" in notice
+    assert plan.meta["weather"]["errors"] == [
+        "Refusing: HTTP 429: Minutely API request limit exceeded"
+    ]
