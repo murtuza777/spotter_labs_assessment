@@ -1,7 +1,7 @@
 # Implementation Plan — Weather-Aware Truck Routing
 
 > **Status, 2026-10-17:** Phases 0–8, 10 and 11 (docs) are built, tested and pushed. Phase 9's Render Blueprint is ready and validated; the services get created from it with one click. The Loom is still to record. The time log is in [PROGRESS.md](PROGRESS.md).
-> Changes from the original plan: Open-Meteo uses `gfs_seamless` on its 0.25° grid (§3). The heatmap is 49 layers whose opacity cross-fades, rather than one layer whose weight is re-evaluated (§4.5). Hosting is all on Render: a static site for the frontend and a Docker web service for the API. The frontend calls the API directly with CORS.
+> Changes from the original plan: Open-Meteo uses `gfs_seamless` on its 0.25° grid (§3). The heatmap is 49 layers whose opacity cross-fades, rather than one layer whose weight is re-evaluated (§4.5). Hosting is all on Render: a static site for the frontend and a Docker web service for the API. The frontend calls the API directly with CORS. Weather now comes from WeatherAPI.com, with the US National Weather Service filling gaps, because Render's shared IPs exhaust Open-Meteo's free per-IP daily cap. §2.3 below records the original Open-Meteo mapping; the current one is in [WEATHER_PROVIDERS.md](WEATHER_PROVIDERS.md). The risk thresholds, load rules and tie-break order are unchanged.
 
 Spotter AI · Full Stack Developer assessment · started 2026-10-17
 **Budget:** at most 16 work hours over at most 4 days.
@@ -64,6 +64,8 @@ The brief leaves some cases open. These are the interpretations we will implemen
 - Each checkpoint records **why** it got its level, for example `wind 47 mph + load 36,000 lb > 30,000 → No Travel`. The UI shows this.
 
 ### 2.3 Weather inputs, from Open-Meteo hourly data
+
+> **Superseded (2026-10-18):** the primary provider is now WeatherAPI.com (`wind_mph`, `gust_mph`, `precip_in` scored as rain, `snow_cm` ÷ 2.54), with NWS gridpoints filling gaps. The rule inputs, units (mph, in/hr) and the hour-ending convention are the same. See [WEATHER_PROVIDERS.md](WEATHER_PROVIDERS.md#what-each-provider-can-supply).
 
 | Rule input | Open-Meteo field | Notes |
 |---|---|---|

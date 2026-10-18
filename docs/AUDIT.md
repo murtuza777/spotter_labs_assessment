@@ -128,3 +128,51 @@ The slider triggers no API calls and no map source reloads (e2e and an in-browse
 **Manual browser test (real TomTom and Open-Meteo, local build):** Denver → SLC planned; the banner shows "Recommended: Route B" with the reason; each card shows all metrics and 100 % forecast; the checkpoint popup shows the factor table and grid cell; Wind metric and slider drag to +18.5 h and +6 h update the time label, truck position ("mile 409 of 526") and the real wind heatmap over the corridor (moderate gusts across Wyoming). On the live site, all 3 demo trips returned 3 TomTom routes and no detour.
 
 **Not reproduced:** the reported "TomTom returned 2 distinct routes, Route C is a waypoint detour" screenshot. None of 14 probed lanes returned fewer than 3 distinct routes today. The detour path is covered by tests with mocked providers, and was exercised live against the TomTom API (`probe_detours`) with the new acceptance rules.
+
+## 12. Production weather availability (2026-10-18)
+
+**Finding:** on Render, Open-Meteo answered every request with HTTP 429 "Daily API request limit exceeded". Its free tier allows 10K calls a day per IP, and Render's free services share outbound IPs. The free tier is also non-commercial only.
+
+**Change:** WeatherAPI.com is the primary provider and the US National Weather Service the fallback. Both sit behind one provider interface and are normalized to one schema (mph, in/hr, the hour ending at each UTC stamp, `None` = unknown). The risk thresholds, load rules and ranking are unchanged. Details: [WEATHER_PROVIDERS.md](WEATHER_PROVIDERS.md).
+
+| Change | Where | Evidence |
+|---|---|---|
+| Field-level fallback: NWS gets the cells, or the single missing values, WeatherAPI couldn't supply. It fills only the same cell and UTC hour, never replaces a WeatherAPI value, and records the source of every value. | `providers/base.py` (`merge_series`), `services/weather.py` | `test_missing_field_is_filled_from_the_fallback_and_attributed`, `test_fill_needs_the_same_forecast_hour`, `test_complete_primary_data_never_calls_the_fallback`, `test_fallback_can_extend_past_the_primary_horizon` |
+| NWS client: `/points` discovery, a descriptive User-Agent, US-only coverage (the InvalidPoint 404 is cached), `/points` cached 24 h and grids 1 h, bounded retries with `Retry-After`, a 1 min pause after persistent 429s, `api.weather.gov` URLs only, the gridpoint polygon checked against the cell, forecasts older than 24 h rejected | `providers/nws.py` | `test_nws_*` (14 tests) |
+| NWS normalization: km/h → mph, mm → in. Multi-hour precipitation totals are never spread into hourly rates (zero totals and 1 h intervals only). Probability of precipitation is never used. | `providers/nws.py` | `test_nws_multi_hour_precipitation_totals_are_never_spread_into_hourly_rates`, `test_nws_probability_of_precipitation_is_never_used_as_intensity`; a mutation that spreads totals fails the suite |
+| WeatherAPI: quota, key, timeout, malformed-response and missing-hour handling; an answer for a different location is rejected; conservative hour alignment; the key never appears in logs, errors or API responses | `providers/weatherapi.py` | `test_weatherapi_*`, `test_weatherapi_for_another_location_is_not_used` |
+| Breaker: a spent quota, a rejected key or a persistent rate limit pauses that provider (shared through the cache), and the notice gives the reason | `services/weather.py` | `test_weatherapi_quota_then_nws_end_to_end`, `test_quota_breaker_skips_provider_until_reset` |
+| Per-checkpoint `weather_source`, per-point heatmap `point_sources`, `meta.weather_sources`; the popup shows the source and the forecast panel credits the providers used | `plan_trip.py`, `presenters.py`, `CheckpointPopup.tsx`, `ForecastSlider.tsx`, `lib/weatherSource.ts` | `test_plan_records_each_checkpoint_source_when_a_fallback_fills_gusts`, vitest `describeWeatherSource` |
+| A gap no provider can fill leaves those checkpoints unknown, adds a notice, and gives no misleading pick | `plan_trip.py` | `test_a_field_no_provider_has_leaves_checkpoints_unknown_and_unrecommended`, `test_fallback_data_is_scored_with_the_same_rules` |
+
+**Verified live (local machine):**
+- NWS served a full Denver → SLC plan (59 cells, 118 requests, 10.3 s) and heatmap (121 cells, 238 requests, 16.8 s). Repeats made 0 requests.
+- Toronto got the cached "outside its grids" answer.
+- WeatherAPI's real reply to an invalid key (HTTP 401, code 2006) opened the breaker.
+
+**Not verified live:** WeatherAPI with a real key (no key is available here), and production after these changes (nothing pushed or deployed).
+
+## 13. UI/UX polish (2026-10-19)
+
+Frontend only: no API, ranking or risk changes. Screenshots of the before (`SCREENSHOTS=baseline`) and after states were captured at 320, 375, 430, 768, 1024, 1280, 1440 and 1920 px wide, plus 844×390 phone landscape.
+
+| Defect found in the baseline | Change | Evidence |
+|---|---|---|
+| **Checkpoint popup overflow:** fixed `anchor="bottom"`, so on phones the popup's top sat 94 px above the map (59 px in landscape) and was clipped | No fixed anchor, so MapLibre picks the side that fits, with 12 px edge padding. Maps under 560×520 px dock the same details inside the map: below the point on narrow maps, beside it on short wide ones. A 44 px close button and Escape close it, and focus returns to the list row. | e2e `checkpoint popups stay inside the map near every edge` (left, right, top, bottom); `checkpoint details dock inside the map and close` (375 px) |
+| Phones: the legend and timeline covered most of the map; the header sat below the map | Single-column flow below 1024 px: trip, recommendation, map, timeline, routes, checkpoints (`display: contents` + `order`, so the map never remounts). The timeline is docked under the map at every size, and the color key moved into it. | screenshots; `no horizontal page overflow` at 6 widths |
+| On a phone, the map trapped page scrolling | Cooperative gestures on touch screens in the single-column layout: one finger scrolls the page, two move the map | verified in the browser pane (375 px mobile emulation) |
+| White text on the yellow Moderate badge; Unknown and Low separated only by color on the map | Tinted badges with dark text plus a dot. No forecast is a hollow ring on the map, dashed grey on the route line, hatched in the miles bar, and a dashed badge. | screenshots (partial-forecast and outage states) |
+| Controls of 26–30 px; 10–11 px text | Primary controls are 40–48 px (slider hit area 44 px); body text 13–16 px; inputs are 16 px on phones to stop iOS zoom | e2e `primary controls are comfortable touch targets` |
+| Long checkpoint list; every metric at the same weight | The form folds into a trip summary after planning; the recommendation leads with a compact metrics line; cards separate trip metrics from ranking metrics; the checkpoint list shows 10 rows plus "Show all" | screenshots |
+| A click on a visible checkpoint flew the map away | The map moves only if the checkpoint is off-screen, or hidden behind docked details | asserted in the edge test |
+| Route cards contained block elements inside a `<button>`, and their name was the whole card's text | Phrasing-only content plus a concise `aria-label` (status, rank, ranking metrics, limitations) | e2e selectors by role |
+
+**Accessibility:**
+- one keyboard focus style;
+- the recommendation heading receives focus when a plan arrives;
+- `aria-activedescendant` on the place search;
+- field errors linked with `aria-describedby`;
+- disclosures with visible chevrons;
+- `prefers-reduced-motion`: the camera jumps instead of animating, and CSS transitions are off (e2e `honours reduced motion`).
+
+**Not verified:** real iOS/Android devices and truck-mounted displays (only Chromium emulation of touch and mobile viewports), screen readers (semantics checked by role queries, not with NVDA or VoiceOver), and the deployed site (nothing pushed or deployed).
