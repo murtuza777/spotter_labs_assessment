@@ -1,10 +1,45 @@
 @import 'tailwindcss';
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
+/*
+ * Design tokens. One restrained blue for actions and selection; slate neutrals for text and
+ * surfaces. Risk colors live in lib/risk.ts (shared with the map) and are always paired
+ * with a text label.
+ */
+@theme {
+  --color-brand-50: #eff5ff;
+  --color-brand-100: #dce8fd;
+  --color-brand-200: #bed3fb;
+  --color-brand-300: #93b4f6;
+  --color-brand-500: #3d6fd9;
+  --color-brand-600: #2756c2;
+  --color-brand-700: #1f459f;
+  --color-brand-800: #1c3b80;
+  --color-brand-900: #1a3266;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* In the base layer, so utilities (e.g. focus:outline-none) can still override. */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: #ffffff;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* One visible focus treatment for every control, keyboard only. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+  }
 }
 
 @keyframes progress {
@@ -16,14 +51,92 @@ body,
   }
 }
 
-.maplibregl-popup-content {
-  border-radius: 0.5rem;
-  padding: 0.6rem 0.75rem;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 0.18);
+/* --- Forecast slider: a 44 px tall hit area around a slim track ------------------------ */
+.forecast-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.forecast-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--color-brand-600) 0 var(--fill, 0%),
+    #cbd5e1 var(--fill, 0%) 100%
+  );
+}
+.forecast-range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #cbd5e1;
+}
+.forecast-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-brand-600);
+}
+.forecast-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid var(--color-brand-600);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.25);
+}
+.forecast-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid var(--color-brand-600);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.25);
+}
+.forecast-range:focus-visible {
+  outline: none;
+}
+.forecast-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+.forecast-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
 }
 
-body {
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #f8fafc;
-  color: #0f172a;
+/* --- Map chrome -------------------------------------------------------------------------- */
+.checkpoint-popup .maplibregl-popup-content {
+  border-radius: 0.625rem;
+  padding: 0.75rem 0.875rem;
+  max-height: min(22rem, 70vh);
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.18);
+  border: 1px solid #e2e8f0;
+}
+
+/* Comfortable zoom buttons on touch screens. */
+@media (pointer: coarse) {
+  .maplibregl-ctrl-group button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* --- Motion ---------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -64,3 +64,17 @@ export function severityIndex(metric: HeatmapMetric, value: number): number {
   }
   return 4
 }
+
+/**
+ * Badge styling per level: a tinted surface with dark text (readable for every level,
+ * including yellow), plus the map color as a dot. Unknown gets a dashed, hollow treatment so
+ * it can never be mistaken for Low.
+ */
+export const RISK_TONE: Record<RiskLevel | 'unknown', string> = {
+  low: 'border-green-200 bg-green-50 text-green-800',
+  moderate: 'border-yellow-300 bg-yellow-50 text-yellow-900',
+  high: 'border-orange-200 bg-orange-50 text-orange-900',
+  severe: 'border-red-200 bg-red-50 text-red-800',
+  no_travel: 'border-purple-200 bg-purple-50 text-purple-900',
+  unknown: 'border-dashed border-slate-300 bg-white text-slate-600',
+}

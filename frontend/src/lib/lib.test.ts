@@ -5,6 +5,7 @@ import { boundsOf, cumulativeMiles, decodePolyline, interpolateAlong, interpolat
 import { buildHeatmapGeoJSON, frameOpacities, heatmapGeometry, toWeight } from './heatmap'
 import { severityIndex } from './risk'
 import { buildRouteModels, truckPosition, truckStatus } from './routeModel'
+import { describeWeatherSource } from './weatherSource'
 
 describe('decodePolyline', () => {
   it('decodes the Google reference example into [lon, lat]', () => {
@@ -177,5 +178,29 @@ describe('formatRiskMiles', () => {
     expect(formatRiskMiles(0.4)).toBe('0.4')
     expect(formatRiskMiles(9.91)).toBe('10.0')
     expect(formatRiskMiles(25.4)).toBe('25')
+  })
+})
+
+describe('describeWeatherSource', () => {
+  const all = (p: string) => ({ wind_mph: p, gust_mph: p, rain_in_hr: p, snow_in_hr: p })
+
+  it('names a single provider', () => {
+    expect(describeWeatherSource(all('weatherapi'))).toBe('WeatherAPI.com')
+    expect(describeWeatherSource(all('nws'))).toBe('National Weather Service')
+  })
+
+  it('says which readings a fallback filled', () => {
+    expect(describeWeatherSource({ ...all('weatherapi'), gust_mph: 'nws' })).toBe(
+      'WeatherAPI.com; gusts from National Weather Service',
+    )
+    expect(describeWeatherSource({ ...all('weatherapi'), wind_mph: 'nws', gust_mph: 'nws', rain_in_hr: 'nws' })).toBe(
+      'National Weather Service; snow from WeatherAPI.com',
+    )
+  })
+
+  it('shows nothing without source data', () => {
+    expect(describeWeatherSource(null)).toBeNull()
+    expect(describeWeatherSource(undefined)).toBeNull()
+    expect(describeWeatherSource({ wind_mph: '', gust_mph: '', rain_in_hr: '', snow_in_hr: '' })).toBeNull()
   })
 })

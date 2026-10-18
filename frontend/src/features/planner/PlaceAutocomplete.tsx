@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { usePlaceSearch } from '../../api/queries'
 import type { Place } from '../../api/types'
+import { FieldError, INPUT_CLASS } from '../../components/Field'
 
 interface Props {
   label: string
@@ -61,10 +62,12 @@ export function PlaceAutocomplete({ label, placeholder, value, onChange, error }
   }
 
   const showList = open && text.trim().length >= 2 && text !== value?.label
+  const optionId = (i: number) => `${listId}-${i}`
+  const errorId = `${id}-error`
 
   return (
     <div className="relative">
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-600">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-slate-700">
         {label}
       </label>
       <input
@@ -75,7 +78,9 @@ export function PlaceAutocomplete({ label, placeholder, value, onChange, error }
         aria-expanded={showList}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-activedescendant={showList && results.length > 0 ? optionId(Math.min(active, results.length - 1)) : undefined}
         aria-invalid={!!error}
+        aria-describedby={error ? errorId : undefined}
         autoComplete="off"
         placeholder={placeholder}
         value={text}
@@ -88,25 +93,27 @@ export function PlaceAutocomplete({ label, placeholder, value, onChange, error }
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onKeyDown={onKeyDown}
-        className={`w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-sky-500 ${
-          error ? 'border-red-400' : 'border-slate-300'
-        }`}
+        enterKeyHint="next"
+        className={INPUT_CLASS}
       />
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      <FieldError id={errorId} message={error} />
       {showList && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg"
+          className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-base shadow-lg lg:text-sm"
         >
-          {search.isFetching && results.length === 0 && <li className="px-3 py-2 text-slate-500">Searching…</li>}
-          {search.isError && <li className="px-3 py-2 text-red-600">Place search is unavailable right now.</li>}
+          {search.isFetching && results.length === 0 && <li className="px-3 py-2.5 text-slate-500">Searching…</li>}
+          {search.isError && (
+            <li className="px-3 py-2.5 text-red-700">Place search is unavailable right now. Try again in a moment.</li>
+          )}
           {!search.isFetching && !search.isError && results.length === 0 && (
-            <li className="px-3 py-2 text-slate-500">No matches in North America.</li>
+            <li className="px-3 py-2.5 text-slate-500">No matches in North America. Try a city name.</li>
           )}
           {results.map((place, i) => (
             <li
               key={`${place.label}-${place.lat}`}
+              id={optionId(i)}
               role="option"
               aria-selected={i === active}
               onMouseDown={(e) => {
@@ -114,7 +121,7 @@ export function PlaceAutocomplete({ label, placeholder, value, onChange, error }
                 choose(place)
               }}
               onMouseEnter={() => setActive(i)}
-              className={`cursor-pointer px-3 py-2 ${i === active ? 'bg-sky-50 text-sky-900' : 'text-slate-700'}`}
+              className={`flex min-h-11 cursor-pointer items-center px-3 py-2 ${i === active ? 'bg-brand-50 text-brand-900' : 'text-slate-700'}`}
             >
               {place.label}
             </li>

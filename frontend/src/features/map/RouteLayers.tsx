@@ -4,6 +4,7 @@ import { Layer, Source } from 'react-map-gl/maplibre'
 import type { TripPlan } from '../../api/types'
 import { defaultRouteId } from '../../lib/routeModel'
 import { useTripStore } from '../../store/tripStore'
+import { UNKNOWN_COLOR } from '../../lib/risk'
 import { LEVEL_COLOR_EXPR, checkpointsGeoJSON, routesGeoJSON, segmentsGeoJSON } from './layers'
 
 export const ROUTE_HIT_LAYER = 'route-hit'
@@ -62,9 +63,24 @@ export const RouteLayers = memo(function RouteLayers({ plan }: { plan: TripPlan 
         <Layer
           id="route-selected-risk"
           type="line"
-          filter={isSelected}
+          filter={['all', isSelected, ['!=', ['get', 'level'], 'unknown']]}
           layout={{ 'line-cap': 'round', 'line-join': 'round' }}
           paint={{ 'line-color': LEVEL_COLOR_EXPR, 'line-width': 5.5 }}
+        />
+        {/* Stretches with no forecast: dashed grey, so they can't be read as any risk level. */}
+        <Layer
+          id="route-selected-unknown"
+          type="line"
+          filter={['all', isSelected, ['==', ['get', 'level'], 'unknown']]}
+          layout={{ 'line-join': 'round' }}
+          paint={{ 'line-color': '#ffffff', 'line-width': 5.5 }}
+        />
+        <Layer
+          id="route-selected-unknown-dash"
+          type="line"
+          filter={['all', isSelected, ['==', ['get', 'level'], 'unknown']]}
+          layout={{ 'line-join': 'round' }}
+          paint={{ 'line-color': UNKNOWN_COLOR, 'line-width': 5.5, 'line-dasharray': [1.2, 1] }}
         />
       </Source>
       <Source id="checkpoints" type="geojson" data={checkpoints} />
@@ -76,10 +92,14 @@ export const RouteLayers = memo(function RouteLayers({ plan }: { plan: TripPlan 
 /**
  * Checkpoints of the selected route. The ones whose ETA is within half an hour of the slider
  * get a thick ring through feature-state (set by NearCheckpoints), which unlike a data-driven
- * paint expression does not make MapLibre re-tile the source on every slider frame.
+ * paint expression does not make MapLibre re-tile the source on every slider frame. The one
+ * whose details are open (FocusedCheckpoint) is larger still. Checkpoints without a forecast
+ * are hollow grey rings, never a filled dot, so they can't be mistaken for Low.
  */
 function CheckpointLayer({ selected }: { selected: string }) {
   const near: ExpressionSpecification = ['boolean', ['feature-state', 'near'], false]
+  const focused: ExpressionSpecification = ['boolean', ['feature-state', 'focused'], false]
+  const unknown: ExpressionSpecification = ['==', ['get', 'level'], 'unknown']
   return (
     <Layer
       id={CHECKPOINT_LAYER}
@@ -88,10 +108,18 @@ function CheckpointLayer({ selected }: { selected: string }) {
       type="circle"
       filter={['==', ['get', 'routeId'], selected]}
       paint={{
-        'circle-color': LEVEL_COLOR_EXPR,
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 4, ['case', near, 6, 3.5], 10, ['case', near, 10, 7]],
-        'circle-stroke-color': ['case', near, '#0f172a', '#ffffff'],
-        'circle-stroke-width': ['case', near, 2.5, 1.5],
+        'circle-color': ['case', unknown, '#ffffff', LEVEL_COLOR_EXPR],
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          4,
+          ['case', focused, 8, near, 6, 3.5],
+          10,
+          ['case', focused, 12, near, 10, 7],
+        ],
+        'circle-stroke-color': ['case', focused, '#1f459f', near, '#0f172a', unknown, UNKNOWN_COLOR, '#ffffff'],
+        'circle-stroke-width': ['case', focused, 3, near, 2.5, unknown, 2.5, 1.5],
       }}
     />
   )

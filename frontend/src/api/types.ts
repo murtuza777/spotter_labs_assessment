@@ -19,6 +19,8 @@ export interface PlanRequest {
   wind_metric: WindMetric
 }
 
+export type WeatherField = 'wind_mph' | 'gust_mph' | 'rain_in_hr' | 'snow_in_hr'
+
 export interface CheckpointWeather {
   wind_mph: number
   gust_mph: number
@@ -34,6 +36,8 @@ export interface Checkpoint {
   eta: string
   forecast_hour: string
   weather: CheckpointWeather | null
+  /** Provider of each reading, e.g. { gust_mph: 'nws', ... }; null without weather. */
+  weather_source?: Record<WeatherField, string> | null
   /** The forecast grid cell actually queried for this checkpoint. */
   weather_cell: { lat: number; lon: number } | null
   risk: {
@@ -106,6 +110,8 @@ export interface PlanMeta {
   routing_ms: number
   checkpoints: number
   weather: WeatherStats
+  /** Weather providers behind the forecasts used, e.g. ["open-meteo"]; for attribution. */
+  weather_sources?: string[]
   total_ms: number
 }
 
@@ -137,7 +143,9 @@ export interface HeatmapResponse {
   grid_step_deg: number
   levels: RiskLevel[]
   frames: Record<HeatmapMetric, (number | null)[][]> // [hour][point]
-  meta?: { weather: WeatherStats; unknown_cells: number }
+  /** Per point: the provider(s) behind its forecast, e.g. "weatherapi+nws"; null if none. */
+  point_sources?: (string | null)[]
+  meta?: { weather: WeatherStats; weather_sources?: string[]; unknown_cells: number }
 }
 
 export interface ApiErrorBody {
