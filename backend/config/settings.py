@@ -105,7 +105,7 @@ PHOTON_BASE_URL = env("PHOTON_BASE_URL", default="https://photon.komoot.io/api")
 GEOCODER_ORDER = env.list("GEOCODER_ORDER", default=["photon", "tomtom"])
 HTTP_TIMEOUT_SECONDS = env.float("HTTP_TIMEOUT_SECONDS", default=30.0)
 
-# Weather sampling (see docs/IMPLEMENTATION_PLAN.md section 3)
+# Weather sampling (see docs/ARCHITECTURE.md, "Weather lookup")
 WEATHER_MODEL = env("WEATHER_MODEL", default="gfs_seamless")
 WEATHER_GRID_DEG = env.float("WEATHER_GRID_DEG", default=0.25)
 WEATHER_CACHE_TTL_S = env.int("WEATHER_CACHE_TTL_S", default=3600)

@@ -1,4 +1,4 @@
-"""Weather risk classification, exactly as specified in docs/IMPLEMENTATION_PLAN.md section 2.
+"""Weather risk classification, exactly as specified in docs/RISK_MODEL.md.
 
 Bands are half-open with the lower bound inclusive, so a value on a shared edge goes to the
 higher level (rain 0.25 in/hr is High). The brief writes the No Travel bands as "> 1.00" and

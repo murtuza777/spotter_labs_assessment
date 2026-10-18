@@ -10,9 +10,9 @@ Deliverables for the Spotter AI Full Stack Developer assessment: the GitHub repo
 
 ## Before sending
 
-- [ ] Record the Loom ([script](LOOM_SCRIPT.md)) and paste its URL into this file and the top of the [README](../README.md).
+- [ ] Record the Loom ([script](LOOM_SCRIPT.md)) and paste its URL into this file and the top of the [README](../../README.md).
 - [ ] Warm the API, then open the live app and plan each demo trip once.
-- [ ] Optional: set `WEATHERAPI_KEY` on the Render API service to use the primary provider ([steps](WEATHER_PROVIDERS.md#render-setup)). Without it, forecasts come from NWS alone.
+- [ ] Optional: set `WEATHERAPI_KEY` on the Render API service to use the primary provider ([steps](../WEATHER_PROVIDERS.md#render-setup)). Without it, forecasts come from NWS alone.
 - [ ] Optional during review: set the `API_HEALTH_URL` repository variable so the keep-warm workflow pings the API every 10 minutes. Turn it off afterwards.
 
 ## Reply draft

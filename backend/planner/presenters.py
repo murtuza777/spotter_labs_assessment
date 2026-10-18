@@ -1,4 +1,4 @@
-"""Domain objects -> JSON-ready dicts (the API contract in docs/IMPLEMENTATION_PLAN.md 4.3)."""
+"""Domain objects -> JSON-ready dicts (the API contract in docs/API.md)."""
 
 from datetime import UTC, datetime
 

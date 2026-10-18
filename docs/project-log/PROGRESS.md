@@ -17,11 +17,13 @@ Budget: at most 16 h over at most 4 days. Plan: [IMPLEMENTATION_PLAN.md](IMPLEME
 
 | 2026-10-17 | Audit and hardening | 1.0 | Full audit ([AUDIT.md](AUDIT.md)). Fixed: unforecast miles ranked as safe (P0); NaN or negative weather mis-scored (P0); naive timestamps; malformed TomTom/Open-Meteo payloads; risk miles rounded to 0; unknown `/api/` paths returning HTML. Added a route cache (resubmit 3.6 s → 0.2 s), `meta` accounting, a bounded TomTom retry, Playwright e2e (12), and backend tests up from 131 to 204. Not pushed. |
 
-| 2026-10-18 | Production weather availability | 2.0 | Render's shared IPs hit Open-Meteo's free daily cap. WeatherAPI.com is now the primary provider, with NWS filling gaps per value; quota breaker, per-checkpoint sources, provider credits; 70 new tests; NWS verified live. Not pushed. See [WEATHER_PROVIDERS.md](WEATHER_PROVIDERS.md). |
+| 2026-10-18 | Production weather availability | 2.0 | Render's shared IPs hit Open-Meteo's free daily cap. WeatherAPI.com is now the primary provider, with NWS filling gaps per value; quota breaker, per-checkpoint sources, provider credits; 70 new tests; NWS verified live. Not pushed. See [WEATHER_PROVIDERS.md](../WEATHER_PROVIDERS.md). |
 
 | 2026-10-19 | UI/UX polish | 2.0 | Responsive single-DOM layout, docked forecast timeline, popup overflow fix (auto-anchor plus a docked fallback), touch targets, risk badges, trip summary, accessibility and reduced motion; 11 new e2e tests. Not pushed. See [AUDIT.md](AUDIT.md) section 13. |
 
-**Total so far: about 7.75 h of 16 h** (the 2026-10-18 review session isn't logged yet)
+| 2026-10-19 | Submission docs | 0.5 | Rewrote the README for evaluators; added architecture, API, risk model, development and deployment docs; moved working notes into docs/project-log; verified WeatherAPI live with a real key. |
+
+**Total so far: about 8.25 h of 16 h** (the 2026-10-18 review session isn't logged yet)
 
 ## Remaining
 

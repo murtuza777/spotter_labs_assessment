@@ -97,7 +97,7 @@ Measured live on 2026-10-18, Denver → Salt Lake City, 3 TomTom routes, 25 mi c
 | Moving the slider, or switching metric or route | — | 0 | 0 | — |
 
 - **Normal operation:** WeatherAPI serves everything, and NWS is called only for gaps. A cold trip with plan and heatmap costs about **180 WeatherAPI requests** at 25 mi spacing, or 205 at 10 mi. The free plan's 100K/month covers about **500–550 cold trips a month**.
-  - **Not measured:** WeatherAPI latency with a real key. At 6 parallel requests it's estimated at 5–10 s for a cold plan.
+  - **Measured live (2026-10-19, real key):** a cold plan's 59 cells took 0.9–2.6 s, and the heatmap's 119 extra cells 4.9 s, at 6 parallel requests.
 - **When NWS serves a whole trip** (WeatherAPI down or unconfigured): about 360 requests and 25–30 s cold. Repeats are cached.
   - `/points` metadata is cached for 24 h, matching its `max-age`.
   - Gridpoint forecasts are cached for 1 h, matching their `max-age` (each is 200–260 KB raw; only the normalized series is cached).
@@ -160,10 +160,14 @@ Nothing in this change has been deployed. The live site keeps its current config
   - NWS discovery, the User-Agent, unit conversion, the 6 h total rule, caching (repeats made 0 requests), out-of-coverage handling (Toronto: 404, cached) and the over-precise coordinate redirect;
   - a full Denver → SLC plan and heatmap served by NWS;
   - WeatherAPI's real response to an invalid key (HTTP 401, code 2006), which opens the breaker and hands every cell to NWS.
-- **Mocked tests only:** WeatherAPI success, quota, timeouts, malformed responses and the location check; NWS rate limits and 5xx errors; field-level merging. See `planner/tests/test_weather_providers.py` and `planner/tests/test_nws_fallback.py`.
-- **Not verified:**
-  - WeatherAPI with a real key: latency, its actual hour semantics, whether it echoes the requested coordinates, and the `precip_in` snow content;
-  - the deployed site: nothing is pushed or deployed.
+- **Verified live with a real WeatherAPI key (2026-10-19, local machine):**
+  - a cold Denver → SLC plan: 59 of 59 cells served by WeatherAPI, all HTTP 200, with every checkpoint sourced from it;
+  - the heatmap: 115 of 119 cells from WeatherAPI. For the other 4, WeatherAPI answered for a named place more than 20 mi from the cell; the location check rejected them and NWS filled them, leaving 0 unknown cells;
+  - repeats within 60 min: no weather calls;
+  - finding: for a coordinate query, WeatherAPI returns the **nearest named place's** coordinates (39.75, −105.00 came back as Denver, 39.739, −104.984), not the exact point. The 20 mi check is what keeps sparse areas honest.
+- **Verified in production (2026-10-19):** after deploying, a live plan returned 3 routes with 100 % coverage. No key was set on Render yet, so NWS served it (118 requests, all 200).
+- **Mocked tests only:** WeatherAPI quota, timeouts and malformed responses; NWS rate limits and 5xx errors. See `planner/tests/test_weather_providers.py` and `planner/tests/test_nws_fallback.py`.
+- **Still unconfirmed:** WeatherAPI's exact hour semantics and whether `precip_in` includes melted snow. Both are handled conservatively, as described above.
 
 ## Risks
 

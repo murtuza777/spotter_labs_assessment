@@ -1,4 +1,4 @@
-// Mirrors the backend contract (docs/IMPLEMENTATION_PLAN.md section 4.3).
+// Mirrors the backend contract (docs/API.md).
 
 export type RiskLevel = 'low' | 'moderate' | 'high' | 'severe' | 'no_travel'
 export type WindMetric = 'gust' | 'sustained'

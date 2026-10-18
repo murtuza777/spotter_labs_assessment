@@ -1,6 +1,6 @@
 # Project: Weather-Aware Truck Routing (Spotter AI assessment)
 
-The source of truth for scope, interpretations and the phase checklist is `docs/IMPLEMENTATION_PLAN.md`. Read it before starting work. Tick off checklist items and log hours in `docs/PROGRESS.md` (hard cap: 16 h).
+The source of truth for scope, interpretations and the phase checklist is `docs/project-log/IMPLEMENTATION_PLAN.md`. Read it before starting work. Tick off checklist items and log hours in `docs/project-log/PROGRESS.md` (hard cap: 16 h).
 
 ## Layout
 - `backend/`: Django 5.2 + DRF, managed with **uv** (`uv run …`; never use pip). App: `planner/`.

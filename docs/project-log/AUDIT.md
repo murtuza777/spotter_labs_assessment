@@ -133,7 +133,7 @@ The slider triggers no API calls and no map source reloads (e2e and an in-browse
 
 **Finding:** on Render, Open-Meteo answered every request with HTTP 429 "Daily API request limit exceeded". Its free tier allows 10K calls a day per IP, and Render's free services share outbound IPs. The free tier is also non-commercial only.
 
-**Change:** WeatherAPI.com is the primary provider and the US National Weather Service the fallback. Both sit behind one provider interface and are normalized to one schema (mph, in/hr, the hour ending at each UTC stamp, `None` = unknown). The risk thresholds, load rules and ranking are unchanged. Details: [WEATHER_PROVIDERS.md](WEATHER_PROVIDERS.md).
+**Change:** WeatherAPI.com is the primary provider and the US National Weather Service the fallback. Both sit behind one provider interface and are normalized to one schema (mph, in/hr, the hour ending at each UTC stamp, `None` = unknown). The risk thresholds, load rules and ranking are unchanged. Details: [WEATHER_PROVIDERS.md](../WEATHER_PROVIDERS.md).
 
 | Change | Where | Evidence |
 |---|---|---|
