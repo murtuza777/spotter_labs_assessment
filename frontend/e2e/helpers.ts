@@ -26,6 +26,8 @@ const MIN_STYLE = {
 
 interface MockOptions {
   scenario?: Scenario
+  /** 'live' loads the real basemap (screenshots); the default mocks it for offline runs. */
+  basemap?: 'mock' | 'live'
   planDelayMs?: number
   planStatus?: number
   planBody?: unknown
@@ -39,12 +41,13 @@ export interface Calls {
 }
 
 export async function mockApi(page: Page, opts: MockOptions = {}): Promise<Calls> {
-  const { scenario = 'mixed', planDelayMs = 700, planStatus = 200, planBody } = opts
+  const { scenario = 'mixed', planDelayMs = 700, planStatus = 200, planBody, basemap = 'mock' } = opts
   const calls: Calls = { plan: 0, heatmap: 0, geocode: 0, health: 0 }
 
-  await page.route('https://tiles.openfreemap.org/**', (route) =>
-    route.request().url().includes('/styles/') ? route.fulfill({ json: MIN_STYLE }) : route.abort(),
-  )
+  if (basemap === 'mock')
+    await page.route('https://tiles.openfreemap.org/**', (route) =>
+      route.request().url().includes('/styles/') ? route.fulfill({ json: MIN_STYLE }) : route.abort(),
+    )
   await page.route('**/api/health/', (route) => {
     calls.health++
     return route.fulfill({ json: { status: 'ok' } })

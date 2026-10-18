@@ -17,7 +17,8 @@ interface Plan {
 const mixed = fixture<Plan>('plan_mixed')
 
 test('plans a trip end to end and shows the backend ranking', async ({ page }) => {
-  const calls = await mockApi(page)
+  // Long enough that the pending state is observable on a loaded machine.
+  const calls = await mockApi(page, { planDelayMs: 2000 })
   await page.goto('/')
   await expect.poll(() => calls.health).toBe(1) // wakes the API on load
 
@@ -33,7 +34,7 @@ test('plans a trip end to end and shows the backend ranking', async ({ page }) =
 
   await expect(page.getByText(`Recommended: Route ${mixed.recommended_route_id}`)).toBeVisible()
   await expect(page.getByText(mixed.recommendation.reason)).toBeVisible()
-  await expect(cards.first()).toContainText('★ Recommended')
+  await expect(cards.first()).toContainText('Recommended')
 
   // Route A crosses the Wyoming gale: its No Travel miles are flagged, not hidden.
   const routeA = cards.filter({ hasText: 'Route A' })
@@ -140,9 +141,9 @@ test('never presents a No Travel trip as safe', async ({ page }) => {
   await mockApi(page, { scenario: 'no_safe_route' })
   await page.goto('/')
   await planTrip(page)
-  await expect(page.getByText('⚠ No safe route at this departure time')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No safe route at this departure time' })).toBeVisible()
   await expect(page.getByText('No route is recommended: every route has No Travel conditions.')).toBeVisible()
-  await expect(page.getByText('★ Recommended')).toHaveCount(0)
+  await expect(page.getByText('Recommended', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Not eligible: No Travel', { exact: true })).toHaveCount(3)
   await expect(page.getByText(/is not eligible: No Travel conditions on [\d.,]+ mi \(safety constraint\)/)).toHaveCount(3)
   await expect(page.getByText(/Every route has No Travel conditions/)).toBeVisible()
@@ -265,6 +266,11 @@ test('repeated submissions replace the results without duplicate requests', asyn
   await page.goto('/')
   await planTrip(page)
   await expect(routeCards(page)).toHaveCount(3)
+  // After a plan the form folds into a trip summary; editing reopens it with the same inputs.
+  await expect(page.getByRole('button', { name: 'Find the safest route' })).toBeHidden()
+  await page.getByRole('button', { name: 'Edit trip' }).click()
+  await expect(page.getByRole('combobox', { name: 'Origin' })).toBeFocused()
+  await expect(page.getByRole('combobox', { name: 'Origin' })).toHaveValue('Denver, Colorado, US')
   await page.getByRole('button', { name: 'Find the safest route' }).click()
   await expect(page.getByRole('button', { name: 'Planning routes…' })).toBeDisabled()
   await expect(routeCards(page)).toHaveCount(3)
@@ -299,10 +305,10 @@ test('a weather outage gives no recommendation instead of a guess', async ({ pag
   await mockApi(page, { scenario: 'weather_outage' })
   await page.goto('/')
   await planTrip(page)
-  await expect(page.getByText('⚠ Weather unavailable: no route can be assessed')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Weather unavailable: no route can be assessed' })).toBeVisible()
   await expect(page.getByText(/No route is recommended: weather forecasts were unavailable/)).toBeVisible()
   await expect(page.getByText(/Weather was unavailable for \d+ of \d+ forecast grid cells/)).toBeVisible()
-  await expect(page.getByText('★ Recommended')).toHaveCount(0)
+  await expect(page.getByText('Recommended', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Provisional pick', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Not eligible: missing forecast', { exact: true })).toHaveCount(3)
   await expect(routeCards(page).first()).toContainText('0%')
