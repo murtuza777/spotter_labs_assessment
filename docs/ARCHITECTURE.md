@@ -69,8 +69,8 @@ sequenceDiagram
   V->>P: plan(request)
   P->>R: TomTom truck routes (weight = load + 35,000 lb tare, 2 alternatives)
   R-->>P: up to 3 routes with per-point travel times
-  P->>P: drop near-duplicates; add waypoint detours if fewer than 3
-  P->>D: place checkpoints every N mi; ETA from TomTom travel times
+  P->>P: drop near-duplicates, add waypoint detours if fewer than 3
+  P->>D: place checkpoints every N mi, ETA from TomTom travel times
   D-->>P: checkpoints with ETA, forecast hour, 0.25° grid cell
   P->>W: series for all distinct cells over the trip's hours
   W-->>P: normalized hourly series (cache, then provider chain)
@@ -78,7 +78,7 @@ sequenceDiagram
   D-->>P: risk, summaries, eligibility, recommendation
   P-->>V: TripPlan
   V-->>UI: JSON (routes, checkpoints, recommendation, notices, meta)
-  UI->>UI: render; then POST /api/heatmap/ for the 0–48 h frames
+  UI->>UI: render, then POST /api/heatmap/ for the 0–48 h frames
 ```
 
 **Routes**
