@@ -28,8 +28,9 @@ Budget: at most 16 h over at most 4 days. Plan: [IMPLEMENTATION_PLAN.md](IMPLEME
 - [x] Deploy the Render Blueprint (API + static site): https://murtuza-truck-routing.onrender.com
 - [x] Smoke-test on the live URL: Seattle → Spokane in the browser, with autocomplete, plan, heatmap, slider, metrics and no console errors
 - [ ] Optional: connect Render's GitHub app so pushes auto-deploy, run a Blueprint "Manual sync" to apply `GEOCODER_ORDER`, and set the `API_HEALTH_URL` repo variable during review
+- [x] Deploy the weather-provider and UI changes (2026-10-19, both Render services at the pushed commit; live plan verified: 3 routes, 100 % forecast via NWS)
 - [ ] Record the Loom ([LOOM_SCRIPT.md](LOOM_SCRIPT.md)) and add the links to the README
-- [ ] Submit the GitHub, hosted and Loom links to Spotter
+- [ ] Submit the GitHub, hosted and Loom links to Spotter ([SUBMISSION.md](SUBMISSION.md) has the checklist and a reply draft)
 
 ## Spike findings (resolved)
 

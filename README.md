@@ -4,7 +4,34 @@ A React + Django app that helps a truck driver pick the **safest** of three truc
 
 - **Live app:** https://murtuza-truck-routing.onrender.com
 - **API:** https://murtuza-truck-routing-api.onrender.com/api/health/ (free tier, so the first request after idle takes about 30–60 s to wake it)
-- **Walkthrough (Loom):** _add the Loom URL here_
+- **Repository:** https://github.com/murtuza777/spotter_labs_assessment
+- **Walkthrough (Loom):** _add the Loom URL here_ · [script](docs/LOOM_SCRIPT.md) · [submission checklist](docs/SUBMISSION.md)
+
+## Evaluate it in 5 minutes
+
+1. **Plan a trip:** open the live app (give the API up to a minute to wake), click **Denver → Salt Lake City**, then **Find the safest route**.
+2. **Read the answer:** the banner names the recommended route, its distance, drive time, arrival, Severe and High miles and forecast coverage, and why it beats each other route. **How routes are ranked** gives the exact order.
+3. **Compare routes:** click each route card. The map highlights it, its checkpoints list below, and no new request is made.
+4. **Check a checkpoint:** click one on the map or in the list. The details show each factor's forecast and level, the load rule, the forecast hour (the ETA rounded up), the grid cell and the weather source.
+5. **Move through time:** drag the **0–48 h** slider or press play. The truck moves, nearby checkpoints get a ring, and **Wind / Rain / Snow** switch the heatmap. The color key shows each band's range.
+6. **Try the rules:**
+   - **Load rule:** set the load to **45,000 lb** (the >40,000 lb rule) or **31,000 lb** (the >30,000 lb rule) on a windy day and replan.
+   - **Checkpoint spacing:** try **10 mi** for more checkpoints.
+   - **Departure time:** move the departure up to 7 days out.
+7. **Check other screen sizes:** at phone width (375 px) the page reorders to trip, answer, map, routes, checkpoints, with nothing cut off.
+
+### Assessment requirements → where they live
+
+| Requirement | Implementation | Tests |
+|---|---|---|
+| Inputs: origin, destination, departure, load | [TripForm](frontend/src/features/planner/TripForm.tsx), [serializers](backend/planner/serializers.py) | e2e form validation, API validation |
+| Three routes from a routing API | TomTom truck routing with alternatives, and detour waypoints if fewer than 3 come back ([plan_trip](backend/planner/services/plan_trip.py)) | `test_services.py`, e2e detour and two-route cases |
+| Weather every 10 / 25 / 50 mi, for the truck's ETA | [sampling](backend/planner/domain/sampling.py), [eta](backend/planner/domain/eta.py), [timebucket](backend/planner/domain/timebucket.py), [weather service](backend/planner/services/weather.py) | forecast-hour and ETA tests |
+| Risk thresholds and load rules | [domain/risk.py](backend/planner/domain/risk.py) | `test_risk.py`: every band edge and load edge |
+| Ranking: Severe mi → High mi → average risk → time | [domain/recommend.py](backend/planner/domain/recommend.py) | `test_recommend.py`: each tie-break and permutation |
+| Map with all routes, checkpoints, risk, ETAs and summaries | [TripMap](frontend/src/features/map/TripMap.tsx), [RouteCard](frontend/src/features/routes/RouteCard.tsx), [CheckpointDetails](frontend/src/features/map/CheckpointDetails.tsx) | e2e main flow, popup edges |
+| Weather heatmap with a 0–48 h slider | [HeatmapLayer](frontend/src/features/map/HeatmapLayer.tsx), [ForecastDock](frontend/src/features/timeline/ForecastDock.tsx) | e2e slider cross-fade, no refetch |
+| Hosted | Render Blueprint ([render.yaml](render.yaml)) | live smoke test |
 
 ---
 
