@@ -25,7 +25,13 @@ from planner.domain.sampling import checkpoint_miles
 from planner.domain.scoring import owned_miles, summarize
 from planner.domain.timebucket import forecast_hour_for
 from planner.providers.base import Place, ProviderError, RouteOption, RoutingProvider
-from planner.services.weather import WeatherService, sample
+from planner.services.weather import (
+    WeatherService,
+    WeatherStats,
+    sample,
+    sample_sources,
+    weather_sources,
+)
 
 log = logging.getLogger(__name__)
 
@@ -135,6 +141,11 @@ class TripPlanner:
         for rid, prep in zip(ROUTE_IDS, prepared, strict=False):
             for cp in prep.checkpoints:
                 cp.weather = sample(series, cp.weather_cell, cp.forecast_hour)
+                cp.weather_source = (
+                    sample_sources(series, cp.weather_cell, cp.forecast_hour)
+                    if cp.weather
+                    else None
+                )
                 cp.risk = assess(cp.weather, req.load_lb, req.wind_metric) if cp.weather else None
             levels = [cp.risk.level if cp.risk else None for cp in prep.checkpoints]
             summary = summarize(levels, [cp.owned_miles for cp in prep.checkpoints])
@@ -158,12 +169,14 @@ class TripPlanner:
                 )
             )
 
-        if weather_stats.failed:
-            why = "; ".join(weather_stats.errors) or "no data returned"
+        notices.extend(weather_notices(weather_stats, self._weather.provider_names))
+        partial = sum(1 for cp in all_cps if cp.weather is None and cp.weather_cell in series)
+        if partial:
             notices.append(
-                f"Weather was unavailable for {weather_stats.failed} of {weather_stats.cells} "
-                f"forecast grid cells (Open-Meteo: {why}). Those miles are shown as "
-                '"No forecast" and are not scored.'
+                f"{partial} checkpoint{'s' if partial != 1 else ''} had an incomplete forecast "
+                "for the hour the truck passes (a wind, gust, rain or snow value was missing "
+                'from every weather provider), so they are shown as "No forecast" and are not '
+                "scored."
             )
         rec = recommend([r.scored for r in routes])
         order = {s.id: i + 1 for i, s in enumerate(rec.order)}
@@ -174,6 +187,8 @@ class TripPlanner:
             "routing_ms": routing_ms,
             "checkpoints": len(all_cps),
             "weather": weather_stats.as_dict(),
+            # Providers behind the forecasts used (cached ones included), for map attribution.
+            "weather_sources": weather_sources(series),
             "total_ms": round((time.perf_counter() - t0) * 1000),
         }
         log.info(
@@ -421,3 +436,31 @@ def _safe(fn) -> list[RouteOption]:
     except ProviderError as exc:
         log.info("detour route failed: %s", exc.code)
         return []
+
+
+PROVIDER_LABELS = {
+    "open-meteo": "Open-Meteo",
+    "weatherapi": "WeatherAPI.com",
+    "nws": "the National Weather Service",
+}
+
+
+def weather_notices(stats: WeatherStats, chain: list[str]) -> list[str]:
+    """User-facing notes about where the forecasts came from and what was unavailable."""
+    out: list[str] = []
+    fallback = {n: c for n, c in stats.sources.items() if chain and n != chain[0]}
+    if fallback:
+        used = ", ".join(f"{PROVIDER_LABELS.get(n, n)} ({c} cells)" for n, c in fallback.items())
+        out.append(
+            f"Some forecasts came from the fallback provider {used} because "
+            f"{PROVIDER_LABELS.get(chain[0], chain[0])} didn't return a complete forecast for "
+            "them. Values are normalized to the same units and hourly convention, and each "
+            "checkpoint shows its source."
+        )
+    if stats.failed:
+        why = "; ".join(stats.errors) or "no data returned"
+        out.append(
+            f"Weather was unavailable for {stats.failed} of {stats.cells} forecast grid cells "
+            f'({why}). Those miles are shown as "No forecast" and are not scored.'
+        )
+    return out

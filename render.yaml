@@ -28,6 +28,19 @@ services:
       # Photon refuses connections from Render's network; TomTom Search answers first.
       - key: GEOCODER_ORDER
         value: tomtom,photon
+      # Weather providers, tried in order: WeatherAPI.com first, then the US National Weather
+      # Service for any cell or missing value it couldn't supply (docs/WEATHER_PROVIDERS.md).
+      # WeatherAPI is skipped while its key is empty; NWS needs no key.
+      - key: WEATHER_PROVIDERS
+        value: weatherapi,nws
+      # WeatherAPI.com key (primary provider). Secret: set it in the Dashboard.
+      - key: WEATHERAPI_KEY
+        sync: false
+      # Forecast days your WeatherAPI plan allows: Free 3, Starter 7.
+      - key: WEATHERAPI_DAYS
+        value: "3"
+      # NWS asks every client for a User-Agent naming the app and a contact. The default is
+      # "truck-weather-routing/1.0 (+<repo URL>)"; set NWS_USER_AGENT to override it.
       - key: WEB_CONCURRENCY
         value: "2"
 

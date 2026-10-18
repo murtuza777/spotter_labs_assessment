@@ -1,73 +1,93 @@
 """Open-Meteo hourly forecast for many locations, batched and retried.
 
 Units requested match the risk rules directly: mph for wind, inches for rain and snowfall.
-Gusts, rain, showers and snowfall are "preceding hour" values (see domain/timebucket.py).
+Gusts, rain, showers and snowfall are "preceding hour" values, i.e. already in the normalized
+HourlySeries convention (see providers/base.py and domain/timebucket.py).
+
+Two endpoints, identical requests and responses:
+  - free:     api.open-meteo.com, non-commercial, rate-limited per IP (10,000 calls/day). On
+              hosts with shared outbound IPs (Render free) other tenants can exhaust it.
+  - customer: customer-api.open-meteo.com with &apikey=..., used when an API key is set.
 """
 
 import logging
 import math
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
 from planner.domain.models import LatLon
-from planner.providers.base import HourlySeries
+from planner.providers.base import HourlySeries, WeatherFetch
 
 log = logging.getLogger(__name__)
 
 HOURLY_VARS = "wind_speed_10m,wind_gusts_10m,rain,showers,snowfall"
-RETRY_STATUSES = {429, 500, 502, 503, 504}
-
-
-class WeatherFetch(dict):
-    """Series per cell (a plain dict to callers), plus why any batch failed, so the API can
-    tell users "the weather service refused the request" instead of silently showing gaps."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.errors: list[str] = []
+FREE_URL = "https://api.open-meteo.com/v1/forecast"
+CUSTOMER_URL = "https://customer-api.open-meteo.com/v1/forecast"
+# Transient: worth a bounded retry. A 429 is only retried when it is a per-minute limit.
+RETRY_STATUSES = {500, 502, 503, 504}
 
 
 class OpenMeteoWeather:
+    name = "open-meteo"
+
     def __init__(
         self,
         client: httpx.Client,
         *,
-        base_url: str,
+        base_url: str | None = None,
+        api_key: str = "",
         model: str = "gfs_seamless",
         batch_size: int = 25,
         max_workers: int = 3,
-        retries: int = 3,
+        retries: int = 2,
         backoff_s: float = 1.0,
+        now=lambda: datetime.now(UTC),
     ):
         self._client = client
-        self._base_url = base_url
+        self._api_key = api_key
+        self._base_url = base_url or (CUSTOMER_URL if api_key else FREE_URL)
         self._model = model
         self._batch_size = batch_size
         self._max_workers = max_workers
         self._retries = retries
         self._backoff_s = backoff_s
+        self._now = now
 
-    def hourly(
-        self, cells: list[LatLon], start: datetime, end: datetime
-    ) -> dict[LatLon, HourlySeries]:
-        if not cells:
-            return {}
-        batches = [cells[i : i + self._batch_size] for i in range(0, len(cells), self._batch_size)]
+    @property
+    def endpoint(self) -> str:
+        return "customer" if self._api_key else "free"
+
+    def hourly(self, cells: list[LatLon], start: datetime, end: datetime) -> WeatherFetch:
         out = WeatherFetch()
+        if not cells:
+            return out
+        t0 = time.perf_counter()
+        batches = [cells[i : i + self._batch_size] for i in range(0, len(cells), self._batch_size)]
         with ThreadPoolExecutor(max_workers=self._max_workers) as pool:
-            for result, error in pool.map(lambda b: self._fetch_batch(b, start, end), batches):
-                out.update(result)
-                if error:
-                    out.errors.append(error)
+            results = list(pool.map(lambda b: self._fetch_batch(b, start, end), batches))
+        for series, error, statuses, exhausted_until in results:
+            out.update(series)
+            for status in statuses:
+                out.calls.record(status)
+            if error:
+                out.errors.append(error)
+            if exhausted_until and (
+                out.quota_exhausted_until is None or exhausted_until > out.quota_exhausted_until
+            ):
+                out.quota_exhausted_until = exhausted_until
+        out.calls.ms = round((time.perf_counter() - t0) * 1000)
+        fetched_at = self._now()
+        for s in out.values():
+            s.source, s.fetched_at, s.requested_end = self.name, fetched_at, end
         return out
 
     def _fetch_batch(
         self, cells: list[LatLon], start: datetime, end: datetime
-    ) -> tuple[dict[LatLon, HourlySeries], str | None]:
-        """Series for one batch, and the failure reason if it couldn't be fetched."""
+    ) -> tuple[dict[LatLon, HourlySeries], str | None, list[str], datetime | None]:
+        """(series, failure reason, status per attempt, quota-exhausted-until) for one batch."""
         params = {
             "latitude": ",".join(f"{c.lat:g}" for c in cells),
             "longitude": ",".join(f"{c.lon:g}" for c in cells),
@@ -80,43 +100,90 @@ class OpenMeteoWeather:
             "start_hour": start.astimezone(UTC).strftime("%Y-%m-%dT%H:%M"),
             "end_hour": end.astimezone(UTC).strftime("%Y-%m-%dT%H:%M"),
         }
+        if self._api_key:
+            params["apikey"] = self._api_key
+        statuses: list[str] = []
         reason = "no response"
         for attempt in range(self._retries + 1):
+            t = time.perf_counter()
             try:
                 response = self._client.get(self._base_url, params=params)
             except httpx.HTTPError as exc:
-                response = None
+                statuses.append("timeout" if isinstance(exc, httpx.TimeoutException) else "error")
                 reason = f"request failed ({type(exc).__name__})"
-            if response is not None and response.status_code == 200:
-                try:
-                    return parse_response(response.json(), cells), None
-                except ValueError:
-                    return {}, "Open-Meteo returned a non-JSON response"
-            if response is not None:
-                reason = f"HTTP {response.status_code}: {_reason(response)}"
-                if response.status_code not in RETRY_STATUSES:
-                    log.warning("Open-Meteo batch of %d failed: %s", len(cells), reason)
-                    return {}, reason
+                retry = True
+            else:
+                statuses.append(str(response.status_code))
+                if response.status_code == 200:
+                    log.info(
+                        "weather provider=%s endpoint=%s cells=%d status=200 ms=%d",
+                        self.name,
+                        self.endpoint,
+                        len(cells),
+                        (time.perf_counter() - t) * 1000,
+                    )
+                    try:
+                        return parse_response(response.json(), cells), None, statuses, None
+                    except ValueError:
+                        return {}, "Open-Meteo returned a non-JSON response", statuses, None
+                reason = f"HTTP {response.status_code}: {_reason(response, self._api_key)}"
+                exhausted_until = self._quota_exhausted_until(response.status_code, reason)
+                if exhausted_until:
+                    log.warning(
+                        "weather provider=%s endpoint=%s quota exhausted until %s: %s",
+                        self.name,
+                        self.endpoint,
+                        exhausted_until.isoformat(),
+                        reason,
+                    )
+                    return {}, reason, statuses, exhausted_until
+                retry = response.status_code in RETRY_STATUSES or (
+                    response.status_code == 429 and "minutely" in reason.lower()
+                )
             log.warning(
-                "Open-Meteo batch of %d attempt %d failed: %s", len(cells), attempt + 1, reason
+                "weather provider=%s endpoint=%s cells=%d attempt=%d failed: %s",
+                self.name,
+                self.endpoint,
+                len(cells),
+                attempt + 1,
+                reason,
             )
+            if not retry:
+                break
             if attempt < self._retries:
                 time.sleep(self._backoff_s * 2**attempt)
-        log.warning(
-            "Open-Meteo batch of %d gave up after %d retries: %s", len(cells), self._retries, reason
-        )
-        return {}, reason
+        return {}, reason, statuses, None
+
+    def _quota_exhausted_until(self, status: int, reason: str) -> datetime | None:
+        """When a 429 means the daily/hourly/monthly budget is spent, when it resets.
+
+        Retrying these only burns more of somebody's quota, so the provider is skipped until
+        then (the caller falls back to the next provider)."""
+        if status != 429:
+            return None
+        now = self._now().astimezone(UTC)
+        text = reason.lower()
+        if "daily" in text:
+            return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        if "hourly" in text:
+            return (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        if "monthly" in text:
+            return now + timedelta(hours=6)  # re-check a few times a day, not every request
+        return None
 
 
-def _reason(response: httpx.Response) -> str:
+def _reason(response: httpx.Response, api_key: str = "") -> str:
     """Open-Meteo puts a human-readable cause in {"error": true, "reason": "..."}."""
+    text = response.reason_phrase or "error"
     try:
         body = response.json()
         if isinstance(body, dict) and body.get("reason"):
-            return str(body["reason"])[:160]
+            text = str(body["reason"])
     except ValueError:
         pass
-    return response.reason_phrase or "error"
+    if api_key:
+        text = text.replace(api_key, "***")
+    return text[:160]
 
 
 def parse_response(data: object, cells: list[LatLon]) -> dict[LatLon, HourlySeries]:

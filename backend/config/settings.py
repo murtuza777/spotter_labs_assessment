@@ -82,7 +82,23 @@ SILENCED_SYSTEM_CHECKS = [
 
 # Third-party providers
 TOMTOM_API_KEY = env("TOMTOM_API_KEY", default="")
-OPEN_METEO_BASE_URL = env("OPEN_METEO_BASE_URL", default="https://api.open-meteo.com/v1/forecast")
+# Weather providers, tried in order. Each later provider gets only the cells, or the missing
+# values within a cell, that the earlier ones couldn't provide (see services/weather.py).
+#   weatherapi: WeatherAPI.com hourly forecasts; needs WEATHERAPI_KEY (skipped without it).
+#   nws:        US National Weather Service (api.weather.gov); no key, US locations only.
+#   open-meteo: optional; free endpoint, or the commercial one with OPEN_METEO_API_KEY.
+WEATHER_PROVIDERS = env.list("WEATHER_PROVIDERS", default=["weatherapi", "nws"])
+WEATHERAPI_KEY = env("WEATHERAPI_KEY", default="")
+WEATHERAPI_DAYS = env.int("WEATHERAPI_DAYS", default=3)  # plan horizon: free 3, Starter 7
+WEATHERAPI_MAX_WORKERS = env.int("WEATHERAPI_MAX_WORKERS", default=6)
+# NWS asks for a User-Agent that identifies the app and a contact (website or email).
+NWS_USER_AGENT = env("NWS_USER_AGENT", default="")  # default: deps.USER_AGENT
+NWS_MAX_WORKERS = env.int("NWS_MAX_WORKERS", default=6)
+NWS_POINT_TTL_S = env.int("NWS_POINT_TTL_S", default=24 * 3600)  # /points: max-age 1 day
+NWS_GRID_TTL_S = env.int("NWS_GRID_TTL_S", default=3600)  # gridpoint forecast: max-age 1 h
+NWS_MAX_AGE_H = env.int("NWS_MAX_AGE_H", default=24)  # older forecasts are rejected
+OPEN_METEO_API_KEY = env("OPEN_METEO_API_KEY", default="")
+OPEN_METEO_BASE_URL = env("OPEN_METEO_BASE_URL", default="")  # override; normally derived
 PHOTON_BASE_URL = env("PHOTON_BASE_URL", default="https://photon.komoot.io/api")
 # Geocoders tried in order. Photon is keyless but refuses connections from Render's network,
 # so production lists TomTom Search first (see render.yaml).

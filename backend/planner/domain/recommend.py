@@ -165,7 +165,8 @@ def recommend(routes: Sequence[ScoredRoute]) -> Recommendation:
             "route that is free of No Travel conditions, so the risk can't be assessed."
         )
         warnings.append(
-            "Weather data was unavailable for most of the trip. Try again in a few minutes."
+            "Weather data was unavailable for most of the trip, so no route can be assessed. "
+            "Try again later; the notices below say why the weather providers failed."
         )
     else:
         reason = _explain(best, pool)

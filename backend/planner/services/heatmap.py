@@ -7,7 +7,7 @@ from planner.domain.corridor import corridor_grid
 from planner.domain.models import LatLon
 from planner.domain.risk import assess
 from planner.domain.timebucket import forecast_hour_for
-from planner.services.weather import WeatherService
+from planner.services.weather import WeatherService, weather_sources
 
 HEATMAP_HOURS = 48
 
@@ -20,6 +20,8 @@ class Heatmap:
     # frames[metric][hour_index][point_index]; None where weather is unavailable
     frames: dict[str, list[list[float | None]]]
     meta: dict = field(default_factory=dict)
+    # Per point: the provider(s) behind its forecast, e.g. "weatherapi" or "weatherapi+nws".
+    point_sources: list[str | None] = field(default_factory=list)
 
 
 class HeatmapBuilder:
@@ -77,5 +79,12 @@ class HeatmapBuilder:
             points=points,
             grid_step_deg=step,
             frames=frames,
-            meta={"weather": stats.as_dict(), "unknown_cells": unknown},
+            point_sources=[
+                "+".join(series[c].providers) or None if c in series else None for c in cells
+            ],
+            meta={
+                "weather": stats.as_dict(),
+                "weather_sources": weather_sources(series),
+                "unknown_cells": unknown,
+            },
         )

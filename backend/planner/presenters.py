@@ -109,6 +109,8 @@ def _checkpoint(cp: Checkpoint) -> dict:
             "rain_in_hr": round(w.rain_in_hr, 3),
             "snow_in_hr": round(w.snow_in_hr, 2),
         },
+        # Provider of each reading above, e.g. {"gust_mph": "nws", ...}; null without weather.
+        "weather_source": cp.weather_source if w is not None else None,
         "risk": None
         if cp.risk is None
         else {
@@ -138,5 +140,6 @@ def heatmap_json(heatmap: Heatmap) -> dict:
         "grid_step_deg": heatmap.grid_step_deg,
         "levels": [lvl.slug for lvl in RiskLevel],
         "frames": heatmap.frames,
+        "point_sources": heatmap.point_sources,
         "meta": heatmap.meta,
     }

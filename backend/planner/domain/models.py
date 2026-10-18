@@ -88,6 +88,8 @@ class Checkpoint:
     forecast_hour: datetime
     weather_cell: LatLon | None = None
     weather: WeatherSample | None = None
+    # Which provider supplied each reading, e.g. {"gust_mph": "nws", ...}; None if no data.
+    weather_source: dict[str, str] | None = None
     risk: RiskAssessment | None = None
     owned_miles: float = 0.0
 
