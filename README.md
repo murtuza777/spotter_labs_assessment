@@ -7,7 +7,7 @@ A route-planning tool for truck drivers and dispatchers. It finds three truck ro
 | **Live app** | https://murtuza-truck-routing.onrender.com |
 | **API health** | https://murtuza-truck-routing-api.onrender.com/api/health/ |
 | **Repository** | https://github.com/murtuza777/spotter_labs_assessment |
-| **Walkthrough video** | _Loom link_ |
+| **Walkthrough video** | https://www.loom.com/share/299aec651e2042378c91e82741249c58 |
 
 > The API runs on Render's free tier. The first request after it has been idle takes 30–60 s while the server wakes; the page pings the API on load to start that early.
 
